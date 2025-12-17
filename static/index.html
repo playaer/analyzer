@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CAN Bus Analyzer</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            margin-top: 15px;
+            font-size: 0.9em;
+        }
+
+        .status.connected {
+            background: rgba(46, 204, 113, 0.3);
+        }
+
+        .status.disconnected {
+            background: rgba(231, 76, 60, 0.3);
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .section-title {
+            font-size: 1.5em;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            width: 100%;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+
+            .container {
+                border-radius: 10px;
+            }
+
+            .content {
+                padding: 15px;
+            }
+        }
+
+        .data-points {
+            font-size: 0.9em;
+            color: #666;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        .connection-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .connection-controls button {
+            flex: 1;
+        }
+
+        .byte-display {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .byte-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            border: 2px solid #e0e0e0;
+        }
+
+        .byte-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .byte-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .chart-stats {
+            display: flex;
+            gap: 20px;
+            font-size: 0.9em;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>CAN Bus Analyzer</h1>
+        <div class="subtitle">Real-time CAN data analysis with UDS protocol support</div>
+        <div id="connectionStatus" class="status disconnected">Disconnected</div>
+    </header>
+
+    <div class="content">
+        <!-- Block 1: CAN Frame Sender -->
+        <div class="section">
+            <div class="section-title">
+                <span>CAN Frame Sender</span>
+                <span class="data-points">Frames sent: <span id="sentCount">0</span></span>
+            </div>
+
+            <div class="form-group">
+                <label for="canId">CAN ID (hex):</label>
+                <input type="text" id="canId" placeholder="0x200" value="0x200">
+            </div>
+
+            <div class="form-group">
+                <label for="canData">Data (hex bytes, space separated):</label>
+                <input type="text" id="canData" placeholder="01 02 03 04 05 06 07 08">
+            </div>
+
+            <button onclick="sendCANFrame()">Send CAN Frame</button>
+
+            <div class="connection-controls">
+                <button id="connectBtn" onclick="connectWebSocket()">Connect</button>
+                <button id="disconnectBtn" onclick="disconnectWebSocket()" disabled>Disconnect</button>
+            </div>
+        </div>
+
+        <!-- Block 2: PID 0x200 Analysis -->
+        <div class="section">
+            <div class="section-title">
+                <span>PID 0x200 Analysis</span>
+                <span class="data-points">Points: <span id="pidPoints">0</span>/500</span>
+            </div>
+
+            <div class="byte-display">
+                <div class="byte-box">
+                    <div class="byte-value" id="byte1Value">00</div>
+                    <div class="byte-label">Byte 1</div>
+                </div>
+                <div class="byte-box">
+                    <div class="byte-value" id="byte2Value">00</div>
+                    <div class="byte-label">Byte 2</div>
+                </div>
+                <div class="byte-box">
+                    <div class="byte-value" id="byte3Value">00</div>
+                    <div class="byte-label">Byte 3</div>
+                </div>
+                <div class="byte-box">
+                    <div class="byte-value" id="byte4Value">00</div>
+                    <div class="byte-label">Byte 4</div>
+                </div>
+            </div>
+
+            <div class="chart-header">
+                <h3>Byte Values Over Time</h3>
+                <div class="chart-stats">
+                    <span>Byte 1 Avg: <span id="byte1Avg">0</span></span>
+                    <span>Byte 2 Avg: <span id="byte2Avg">0</span></span>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="pidChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Block 3: Byte Difference Analysis -->
+        <div class="section">
+            <div class="section-title">
+                <span>Byte Difference Analysis</span>
+                <span class="data-points">Points: <span id="diffPoints">0</span>/500</span>
+            </div>
+
+            <div class="grid-2">
+                <div>
+                    <h3>Byte 1 - Byte 2 Difference</h3>
+                    <div class="chart-container">
+                        <canvas id="diffChart"></canvas>
+                    </div>
+                </div>
+                <div>
+                    <h3>Moving Average (Window: 10)</h3>
+                    <div class="chart-container">
+                        <canvas id="avgChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-stats" style="margin-top: 20px;">
+                <span>Current Diff: <span id="currentDiff">0</span></span>
+                <span>Moving Avg: <span id="movingAvg">0</span></span>
+                <span>Max Diff: <span id="maxDiff">0</span></span>
+                <span>Min Diff: <span id="minDiff">0</span></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // WebSocket connection
+    let ws = null;
+    let isConnected = false;
+    let sentCount = 0;
+
+    // Data storage for charts
+    const MAX_POINTS = 500;
+    let pidData = {
+        labels: [],
+        byte1: [],
+        byte2: [],
+        byte3_4: []
+    };
+
+    let diffData = {
+        labels: [],
+        differences: [],
+        movingAverages: []
+    };
+
+    // Chart instances
+    let pidChart = null;
+    let diffChart = null;
+    let avgChart = null;
+
+    // Initialize charts
+    function initCharts() {
+        const ctx1 = document.getElementById('pidChart').getContext('2d');
+        pidChart = new Chart(ctx1, {
+            type: 'line',
+            data: {
+                labels: pidData.labels,
+                datasets: [
+                    {
+                        label: 'Byte 1',
+                        data: pidData.byte1,
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                        tension: 0.4,
+                        fill: false
+                    },
+                    {
+                        label: 'Byte 2',
+                        data: pidData.byte2,
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                        tension: 0.4,
+                        fill: false
+                    },
+                    {
+                        label: 'Bytes 3-4 (HiLo)',
+                        data: pidData.byte3_4,
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                        tension: 0.4,
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        display: true,
+                        title: {
+                            display: true,
+                            text: 'Time'
+                        }
+                    },
+                    y: {
+                        display: true,
+                        title: {
+                            display: true,
+                            text: 'Value'
+                        },
+                        suggestedMin: 0,
+                        suggestedMax: 255
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    }
+                }
+            }
+        });
+
+        const ctx2 = document.getElementById('diffChart').getContext('2d');
+        diffChart = new Chart(ctx2, {
+            type: 'line',
+            data: {
+                labels: diffData.labels,
+                datasets: [{
+                    label: 'Byte1 - Byte2',
+                    data: diffData.differences,
+                    borderColor: 'rgba(153, 102, 255, 1)',
+                    backgroundColor: 'rgba(153, 102, 255, 0.1)',
+                    tension: 0.4,
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { display: true, title: { display: true, text: 'Time' } },
+                    y: {
+                        display: true,
+                        title: { display: true, text: 'Difference' },
+                        suggestedMin: -255,
+                        suggestedMax: 255
+                    }
+                }
+            }
+        });
+
+        const ctx3 = document.getElementById('avgChart').getContext('2d');
+        avgChart = new Chart(ctx3, {
+            type: 'line',
+            data: {
+                labels: diffData.labels,
+                datasets: [{
+                    label: 'Moving Average',
+                    data: diffData.movingAverages,
+                    borderColor: 'rgba(255, 159, 64, 1)',
+                    backgroundColor: 'rgba(255, 159, 64, 0.1)',
+                    tension: 0.4,
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { display: true, title: { display: true, text: 'Time' } },
+                    y: {
+                        display: true,
+                        title: { display: true, text: 'Average' },
+                        suggestedMin: -255,
+                        suggestedMax: 255
+                    }
+                }
+            }
+        });
+    }
+
+    // WebSocket functions
+    function connectWebSocket() {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            return;
+        }
+
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws`;
+
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = function() {
+            isConnected = true;
+            updateConnectionStatus(true);
+            console.log('WebSocket connected');
+        };
+
+        ws.onclose = function() {
+            isConnected = false;
+            updateConnectionStatus(false);
+            console.log('WebSocket disconnected');
+        };
+
+        ws.onerror = function(error) {
+            console.error('WebSocket error:', error);
+            alert('Failed to connect to WebSocket server');
+        };
+
+        ws.onmessage = function(event) {
+            try {
+                const data = JSON.parse(event.data);
+                handleWebSocketMessage(data);
+            } catch (error) {
+                console.error('Failed to parse WebSocket message:', error);
+            }
+        };
+    }
+
+    function disconnectWebSocket() {
+        if (ws) {
+            ws.close();
+            ws = null;
+        }
+    }
+
+    function updateConnectionStatus(connected) {
+        const statusElem = document.getElementById('connectionStatus');
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+
+        if (connected) {
+            statusElem.textContent = 'Connected';
+            statusElem.className = 'status connected';
+            connectBtn.disabled = true;
+            disconnectBtn.disabled = false;
+        } else {
+            statusElem.textContent = 'Disconnected';
+            statusElem.className = 'status disconnected';
+            connectBtn.disabled = false;
+            disconnectBtn.disabled = true;
+        }
+    }
+
+    // Handle incoming WebSocket messages
+    function handleWebSocketMessage(data) {
+        if (data.type === 'can_frame' && data.id === '0x200') {
+            processPID200(data);
+        } else if (data.type === 'ack') {
+            console.log('ACK received:', data.message);
+        }
+    }
+
+    // Process PID 0x200 data
+    function processPID200(frame) {
+        const data = hexToBytes(frame.data);
+        if (data.length < 4) return;
+
+        // Extract bytes
+        const byte1 = data[0];
+        const byte2 = data[1];
+        const byte3 = data[2];
+        const byte4 = data[3];
+        const byte3_4 = (byte3 << 8) | byte4;
+
+        // Update display
+        document.getElementById('byte1Value').textContent = byte1.toString(16).padStart(2, '0').toUpperCase();
+        document.getElementById('byte2Value').textContent = byte2.toString(16).padStart(2, '0').toUpperCase();
+        document.getElementById('byte3Value').textContent = byte3.toString(16).padStart(2, '0').toUpperCase();
+        document.getElementById('byte4Value').textContent = byte4.toString(16).padStart(2, '0').toUpperCase();
+
+        // Add data point
+        const timestamp = new Date().toLocaleTimeString();
+
+        // PID chart data
+        pidData.labels.push(timestamp);
+        pidData.byte1.push(byte1);
+        pidData.byte2.push(byte2);
+        pidData.byte3_4.push(byte3_4);
+
+        // Limit data points
+        if (pidData.labels.length > MAX_POINTS) {
+            pidData.labels.shift();
+            pidData.byte1.shift();
+            pidData.byte2.shift();
+            pidData.byte3_4.shift();
+        }
+
+        // Update averages
+        updateAverages();
+
+        // Update chart
+        pidChart.update();
+        document.getElementById('pidPoints').textContent = pidData.labels.length;
+
+        // Calculate difference
+        const diff = byte1 - byte2;
+
+        // Difference chart data
+        diffData.labels.push(timestamp);
+        diffData.differences.push(diff);
+
+        // Calculate moving average
+        const windowSize = 10;
+        const startIndex = Math.max(0, diffData.differences.length - windowSize);
+        const windowData = diffData.differences.slice(startIndex);
+        const movingAvg = windowData.reduce((a, b) => a + b, 0) / windowData.length;
+        diffData.movingAverages.push(movingAvg);
+
+        // Limit data points
+        if (diffData.labels.length > MAX_POINTS) {
+            diffData.labels.shift();
+            diffData.differences.shift();
+            diffData.movingAverages.shift();
+        }
+
+        // Update stats
+        document.getElementById('currentDiff').textContent = diff;
+        document.getElementById('movingAvg').textContent = movingAvg.toFixed(2);
+        document.getElementById('maxDiff').textContent = Math.max(...diffData.differences);
+        document.getElementById('minDiff').textContent = Math.min(...diffData.differences);
+
+        // Update charts
+        diffChart.update();
+        avgChart.update();
+        document.getElementById('diffPoints').textContent = diffData.labels.length;
+    }
+
+    function updateAverages() {
+        if (pidData.byte1.length > 0) {
+            const byte1Avg = pidData.byte1.reduce((a, b) => a + b, 0) / pidData.byte1.length;
+            const byte2Avg = pidData.byte2.reduce((a, b) => a + b, 0) / pidData.byte2.length;
+            document.getElementById('byte1Avg').textContent = byte1Avg.toFixed(2);
+            document.getElementById('byte2Avg').textContent = byte2Avg.toFixed(2);
+        }
+    }
+
+    // Send CAN frame
+    function sendCANFrame() {
+        if (!isConnected || !ws) {
+            alert('Please connect to WebSocket first');
+            return;
+        }
+
+        const canId = document.getElementById('canId').value;
+        const canData = document.getElementById('canData').value;
+
+        // Validate input
+        if (!canId.match(/^0x[0-9A-Fa-f]+$/)) {
+            alert('Invalid CAN ID format. Use hex like 0x200');
+            return;
+        }
+
+        if (!canData.match(/^([0-9A-Fa-f]{2}\s*)+$/)) {
+            alert('Invalid data format. Use hex bytes separated by spaces');
+            return;
+        }
+
+        // Send via WebSocket
+        const message = {
+            type: 'send_can',
+            id: canId,
+            data: canData.replace(/\s+/g, '')
+        };
+
+        ws.send(JSON.stringify(message));
+        sentCount++;
+        document.getElementById('sentCount').textContent = sentCount;
+
+        console.log('Sent CAN frame:', message);
+    }
+
+    // Utility functions
+    function hexToBytes(hex) {
+        const bytes = [];
+        for (let i = 0; i < hex.length; i += 2) {
+            bytes.push(parseInt(hex.substr(i, 2), 16));
+        }
+        return bytes;
+    }
+
+    function bytesToHex(bytes) {
+        return bytes.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    // Initialize on load
+    window.onload = function() {
+        initCharts();
+        // Auto-connect after 1 second
+        setTimeout(connectWebSocket, 1000);
+    };
+</script>
+</body>
+</html>

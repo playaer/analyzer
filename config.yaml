@@ -1,0 +1,5 @@
+can_interface: "can0"
+log_file: "can_log.txt"
+db_path: "can_data.db"
+http_addr: ":8080"
+baud_rate: 500000
