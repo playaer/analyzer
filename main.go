@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"net/http"
 	"os"
 	"os/signal"
@@ -17,6 +18,12 @@ import (
 )
 
 func main() {
+	// Парсинг аргументов командной строки
+	mode := flag.String("mode", "file", "Режим работы: can или file")
+	filePath := flag.String("file", "", "Путь к файлу для чтения (только в режиме file)")
+	enableLog := flag.Bool("log", false, "Включить логирование")
+	flag.Parse()
+
 	// Инициализация логгера
 	logger := zerolog.New(os.Stdout).With().Timestamp().Logger()
 
@@ -33,19 +40,32 @@ func main() {
 	}
 	defer db.Close()
 
-	// Инициализация CAN обработчика
-	canHandler, err := canbus.NewCANHandler(cfg.CANInterface, cfg.LogFile, db, logger)
-	if err != nil {
-		logger.Fatal().Err(err).Msg("Failed to initialize CAN handler")
+	// Инициализация обработчика данных
+	var dataHandler canbus.DataHandler
+	if *mode == "can" {
+		dataHandler, err = canbus.NewCANHandler(cfg.CANInterface, cfg.LogFile, db, logger, *enableLog)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to initialize CAN handler")
+		}
+	} else if *mode == "file" {
+		if *filePath == "" {
+			logger.Fatal().Msg("File path is required in file mode")
+		}
+		dataHandler, err = canbus.NewFileHandler(*filePath, cfg.LogFile, db, logger, *enableLog)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to initialize file handler")
+		}
+	} else {
+		logger.Fatal().Msg("Unknown mode")
 	}
-	defer canHandler.Close()
+	defer dataHandler.Close()
 
 	// Инициализация WebSocket хаба
-	wsHub := websocket.NewHub(canHandler, db, logger)
+	wsHub := websocket.NewHub(dataHandler, db, logger)
 	go wsHub.Run()
 
-	// Запуск CAN чтения
-	go canHandler.StartReading(wsHub.Broadcast)
+	// Запуск чтения данных
+	go dataHandler.StartReading(wsHub.Broadcast)
 
 	// Настройка HTTP сервера
 	mux := http.NewServeMux()
@@ -77,7 +97,7 @@ func main() {
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
 	go func() {
-		logger.Info().Str("addr", cfg.HTTPAddr).Msg("Starting HTTP server")
+		logger.Info().Str("addr", cfg.HTTPAddr).Str("mode", *mode).Msg("Starting HTTP server")
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Fatal().Err(err).Msg("Server failed")
 		}
@@ -93,6 +113,6 @@ func main() {
 		logger.Error().Err(err).Msg("Server shutdown failed")
 	}
 
-	canHandler.Close()
+	dataHandler.Close()
 	logger.Info().Msg("Server stopped")
 }

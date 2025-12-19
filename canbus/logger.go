@@ -25,8 +25,7 @@ func (l *CANLogger) LogFrame(frame CANFrame, direction string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	// Формат: (timestamp) canX ID#data
-	// Пример: (1616161616.123456) can0 123#DEADBEEF
+	// Формат: (timestamp) interface ID#data
 	timestamp := fmt.Sprintf("%.6f", float64(frame.Time.UnixNano())/1e9)
 	dataHex := hex.EncodeToString(frame.Data)
 
@@ -38,7 +37,7 @@ func (l *CANLogger) LogFrame(frame CANFrame, direction string) {
 
 	l.file.WriteString(logLine)
 
-	// Также логируем в расширенном формате для совместимости
+	// Также логируем в расширенном формате
 	extendedLine := fmt.Sprintf("%s %s %03X [%d] %s\n",
 		frame.Time.Format("2006-01-02 15:04:05.000000"),
 		direction,

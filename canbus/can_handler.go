@@ -5,14 +5,14 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"go.einride.tech/can"
+	"go.einride.tech/can/pkg/socketcan"
 	"net"
 	"sync"
 	"time"
 
 	"can-analyzer/database"
 	"github.com/rs/zerolog"
-	"go.einride.tech/can"
-	"go.einride.tech/can/pkg/socketcan"
 )
 
 type CANFrame struct {
@@ -32,11 +32,12 @@ type CANHandler struct {
 	sendChan    chan CANFrame
 	ctx         context.Context
 	cancel      context.CancelFunc
+	enableLog   bool
 	receiver    *socketcan.Receiver
 	transmitter *socketcan.Transmitter
 }
 
-func NewCANHandler(interfaceName, logFile string, db *database.DB, log zerolog.Logger) (*CANHandler, error) {
+func NewCANHandler(interfaceName, logFile string, db *database.DB, log zerolog.Logger, enableLog bool) (*CANHandler, error) {
 	// Используем socketcan.DialContext вместо can.NewConnection
 	ctx := context.Background()
 	conn, err := socketcan.DialContext(ctx, "can", interfaceName)
@@ -44,10 +45,12 @@ func NewCANHandler(interfaceName, logFile string, db *database.DB, log zerolog.L
 		return nil, fmt.Errorf("failed to open CAN interface: %v", err)
 	}
 
-	logger, err := NewCANLogger(logFile)
-	if err != nil {
-		conn.Close()
-		return nil, fmt.Errorf("failed to create CAN logger: %v", err)
+	var logger *CANLogger
+	if enableLog {
+		logger, err = NewCANLogger(logFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create CAN logger: %v", err)
+		}
 	}
 
 	handlerCtx, cancel := context.WithCancel(context.Background())
@@ -101,7 +104,9 @@ func (h *CANHandler) readLoop(broadcastFunc func([]byte)) {
 			}
 
 			// Логирование
-			h.logger.LogFrame(canFrame, "RX")
+			if h.enableLog && h.logger != nil {
+				h.logger.LogFrame(canFrame, "RX")
+			}
 
 			// Проверка фильтра
 			if h.checkFilter(canFrame.ID) {
@@ -136,7 +141,9 @@ func (h *CANHandler) writeLoop() {
 				h.log.Error().Err(err).Msg("Failed to write CAN frame")
 			} else {
 				// Логирование отправленного фрейма
-				h.logger.LogFrame(frame, "TX")
+				if h.enableLog && h.logger != nil {
+					h.logger.LogFrame(frame, "TX")
+				}
 			}
 		}
 	}

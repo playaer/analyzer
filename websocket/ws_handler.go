@@ -30,14 +30,14 @@ type Client struct {
 }
 
 type Hub struct {
-	clients    map[*Client]bool
-	broadcast  chan []byte
-	register   chan *Client
-	unregister chan *Client
-	canHandler *canbus.CANHandler
-	db         *database.DB
-	log        zerolog.Logger
-	mu         sync.RWMutex
+	clients     map[*Client]bool
+	broadcast   chan []byte
+	register    chan *Client
+	unregister  chan *Client
+	dataHandler canbus.DataHandler // Изменено на DataHandler
+	db          *database.DB
+	log         zerolog.Logger
+	mu          sync.RWMutex
 }
 
 type WSMessage struct {
@@ -47,15 +47,15 @@ type WSMessage struct {
 	Command string `json:"command,omitempty"`
 }
 
-func NewHub(canHandler *canbus.CANHandler, db *database.DB, log zerolog.Logger) *Hub {
+func NewHub(dataHandler canbus.DataHandler, db *database.DB, log zerolog.Logger) *Hub {
 	return &Hub{
-		broadcast:  make(chan []byte, 256),
-		register:   make(chan *Client),
-		unregister: make(chan *Client),
-		clients:    make(map[*Client]bool),
-		canHandler: canHandler,
-		db:         db,
-		log:        log,
+		broadcast:   make(chan []byte, 256),
+		register:    make(chan *Client),
+		unregister:  make(chan *Client),
+		clients:     make(map[*Client]bool),
+		dataHandler: dataHandler,
+		db:          db,
+		log:         log,
 	}
 }
 
@@ -117,32 +117,6 @@ func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	go client.readPump()
 }
 
-func (c *Client) readPump() {
-	defer func() {
-		c.hub.unregister <- c
-		c.conn.Close()
-	}()
-
-	c.conn.SetReadLimit(512)
-	c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
-	c.conn.SetPongHandler(func(string) error {
-		c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
-		return nil
-	})
-
-	for {
-		_, message, err := c.conn.ReadMessage()
-		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				c.hub.log.Error().Err(err).Msg("WebSocket read error")
-			}
-			break
-		}
-
-		c.handleMessage(message)
-	}
-}
-
 func (c *Client) writePump() {
 	ticker := time.NewTicker(54 * time.Second)
 	defer func() {
@@ -178,6 +152,32 @@ func (c *Client) writePump() {
 	}
 }
 
+func (c *Client) readPump() {
+	defer func() {
+		c.hub.unregister <- c
+		c.conn.Close()
+	}()
+
+	c.conn.SetReadLimit(512)
+	c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+	c.conn.SetPongHandler(func(string) error {
+		c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+		return nil
+	})
+
+	for {
+		_, message, err := c.conn.ReadMessage()
+		if err != nil {
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				c.hub.log.Error().Err(err).Msg("WebSocket read error")
+			}
+			break
+		}
+
+		c.handleMessage(message)
+	}
+}
+
 func (c *Client) handleMessage(message []byte) {
 	var wsMsg WSMessage
 	if err := json.Unmarshal(message, &wsMsg); err != nil {
@@ -208,7 +208,7 @@ func (c *Client) handleSendCAN(msg WSMessage) {
 		return
 	}
 
-	// Отправка в CAN
+	// Отправка в обработчик данных
 	frame := canbus.CANFrame{
 		ID:   uint32(canID),
 		Data: data,
@@ -216,7 +216,7 @@ func (c *Client) handleSendCAN(msg WSMessage) {
 		Time: time.Now(),
 	}
 
-	c.hub.canHandler.SendFrame(frame)
+	c.hub.dataHandler.SendFrame(frame)
 
 	// Отправка подтверждения
 	response := fmt.Sprintf(
@@ -228,6 +228,5 @@ func (c *Client) handleSendCAN(msg WSMessage) {
 
 func (c *Client) handleUDSCommand(msg WSMessage) {
 	// Реализация UDS команд
-	// Здесь можно добавить логику для стандартных UDS команд
 	c.hub.log.Info().Str("command", msg.Command).Msg("UDS command received")
 }
