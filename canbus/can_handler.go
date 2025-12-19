@@ -161,10 +161,12 @@ func (h *CANHandler) checkFilter(canID uint32) bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
+	// If no filters are set, pass everything
 	if len(h.filters) == 0 {
-		return true // Если фильтров нет, пропускаем все
+		return true
 	}
 
+	// Check if this CAN ID is in the filters
 	return h.filters[canID]
 }
 
@@ -211,4 +213,9 @@ func ParsePID200(data []byte) (byte, byte, uint16, error) {
 	byte3_4 := binary.BigEndian.Uint16(data[2:4])
 
 	return byte1, byte2, byte3_4, nil
+}
+
+// Добавьте метод ReloadFilters в структуру CANHandler
+func (h *CANHandler) ReloadFilters() error {
+	return h.loadFilters()
 }

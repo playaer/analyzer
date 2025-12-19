@@ -158,10 +158,12 @@ func (h *FileHandler) checkFilter(canID uint32) bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
+	// If no filters are set, pass everything
 	if len(h.filters) == 0 {
-		return true // Если фильтров нет, пропускаем все
+		return true
 	}
 
+	// Check if this CAN ID is in the filters
 	return h.filters[canID]
 }
 

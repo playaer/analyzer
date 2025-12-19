@@ -1,12 +1,12 @@
 package api
 
 import (
+	"can-analyzer/canbus"
 	"database/sql"
 	"encoding/json"
 	"net/http"
 	"strconv"
 
-	"can-analyzer/canbus"
 	"can-analyzer/database"
 	"github.com/rs/zerolog"
 )
@@ -17,6 +17,23 @@ type APIHandler struct {
 	dataHandler canbus.DataHandler
 }
 
+type Filter struct {
+	ID      int    `json:"id"`
+	CANID   uint32 `json:"can_id"`
+	Mask    uint32 `json:"mask"`
+	Enabled bool   `json:"enabled"`
+}
+
+type Settings struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+type CANFrameRequest struct {
+	ID   string `json:"id"`
+	Data string `json:"data"`
+}
+
 func NewAPIHandler(db *database.DB, dataHandler canbus.DataHandler, log zerolog.Logger) *APIHandler {
 	return &APIHandler{
 		db:          db,
@@ -25,7 +42,20 @@ func NewAPIHandler(db *database.DB, dataHandler canbus.DataHandler, log zerolog.
 	}
 }
 
-// ... остальные функции остаются такими же ...
+func (h *APIHandler) HandleFilters(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		h.getFilters(w, r)
+	case http.MethodPost:
+		h.addFilter(w, r)
+	case http.MethodPut:
+		h.updateFilter(w, r)
+	case http.MethodDelete:
+		h.deleteFilter(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
 
 func (h *APIHandler) reloadFilters() {
 	// Метод для перезагрузки фильтров в обработчике данных
@@ -169,4 +199,145 @@ func (h *APIHandler) deleteFilter(w http.ResponseWriter, r *http.Request) {
 	h.reloadFilters()
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *APIHandler) getFilters(w http.ResponseWriter, r *http.Request) {
+	rows, err := h.db.Query("SELECT id, can_id, mask, enabled FROM filters")
+	if err != nil {
+		h.log.Error().Err(err).Msg("Failed to query filters")
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	filters := []Filter{}
+	for rows.Next() {
+		var f Filter
+		var enabledInt int
+		if err := rows.Scan(&f.ID, &f.CANID, &f.Mask, &enabledInt); err != nil {
+			h.log.Error().Err(err).Msg("Failed to scan filter")
+			continue
+		}
+		f.Enabled = enabledInt == 1
+		filters = append(filters, f)
+	}
+
+	if err := rows.Err(); err != nil {
+		h.log.Error().Err(err).Msg("Error iterating filters")
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(filters); err != nil {
+		h.log.Error().Err(err).Msg("Failed to encode filters")
+	}
+}
+
+func (h *APIHandler) updateFilter(w http.ResponseWriter, r *http.Request) {
+	idStr := r.URL.Query().Get("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Invalid filter ID", http.StatusBadRequest)
+		return
+	}
+
+	var f Filter
+	if err := json.NewDecoder(r.Body).Decode(&f); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	enabledValue := 0
+	if f.Enabled {
+		enabledValue = 1
+	}
+
+	_, err = h.db.Exec(
+		"UPDATE filters SET can_id = ?, mask = ?, enabled = ? WHERE id = ?",
+		f.CANID, f.Mask, enabledValue, id,
+	)
+	if err != nil {
+		h.log.Error().Err(err).Msg("Failed to update filter")
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	f.ID = id
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(f); err != nil {
+		h.log.Error().Err(err).Msg("Failed to encode response")
+	}
+}
+
+func (h *APIHandler) HandleSettings(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		h.getSettings(w, r)
+	case http.MethodPost:
+		h.saveSettings(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (h *APIHandler) getSettings(w http.ResponseWriter, r *http.Request) {
+	key := r.URL.Query().Get("key")
+
+	var value string
+	err := h.db.QueryRow("SELECT value FROM settings WHERE key = ?", key).Scan(&value)
+	if err != nil {
+		http.Error(w, "Setting not found", http.StatusNotFound)
+		return
+	}
+
+	settings := Settings{Key: key, Value: value}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(settings)
+}
+
+func (h *APIHandler) saveSettings(w http.ResponseWriter, r *http.Request) {
+	var s Settings
+	if err := json.NewDecoder(r.Body).Decode(&s); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	_, err := h.db.Exec(
+		"INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
+		s.Key, s.Value,
+	)
+	if err != nil {
+		h.log.Error().Err(err).Msg("Failed to save settings")
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(s)
+}
+
+func (h *APIHandler) HandleSendCAN(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req CANFrameRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Здесь будет логика отправки CAN фрейма
+	// Пока что просто возвращаем подтверждение
+
+	response := map[string]string{
+		"status":  "success",
+		"message": "CAN frame queued for sending",
+		"id":      req.ID,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }

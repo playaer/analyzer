@@ -80,7 +80,7 @@ func main() {
 	})
 
 	// API endpoints
-	apiHandler := api.NewAPIHandler(db, logger)
+	apiHandler := api.NewAPIHandler(db, dataHandler, logger)
 	mux.HandleFunc("/api/filters", apiHandler.HandleFilters)
 	mux.HandleFunc("/api/settings", apiHandler.HandleSettings)
 	mux.HandleFunc("/api/send", apiHandler.HandleSendCAN)
