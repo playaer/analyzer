@@ -15,13 +15,6 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// DataHandler интерфейс для работы с данными (CAN или файл)
-type DataHandler interface {
-	StartReading(broadcastFunc func([]byte))
-	SendFrame(frame CANFrame)
-	Close()
-}
-
 type FileHandler struct {
 	filePath  string
 	logger    *CANLogger
@@ -271,4 +264,8 @@ func parseTime(timeStr string) (time.Time, error) {
 		return time.Time{}, err
 	}
 	return t, nil
+}
+
+func (h *FileHandler) ReloadFilters() error {
+	return h.loadFilters()
 }
