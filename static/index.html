@@ -98,7 +98,7 @@
             font-weight: 500;
         }
 
-        input {
+        input, select {
             width: 100%;
             padding: 12px 15px;
             border: 2px solid #e0e0e0;
@@ -107,7 +107,7 @@
             transition: border-color 0.3s;
         }
 
-        input:focus {
+        input:focus, select:focus {
             outline: none;
             border-color: #667eea;
         }
@@ -159,6 +159,10 @@
             .content {
                 padding: 15px;
             }
+
+            .byte-inputs {
+                grid-template-columns: repeat(2, 1fr) !important;
+            }
         }
 
         .data-points {
@@ -182,7 +186,7 @@
 
         .byte-display {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(8, 1fr);
             gap: 10px;
             margin-top: 15px;
         }
@@ -196,13 +200,13 @@
         }
 
         .byte-value {
-            font-size: 1.8em;
+            font-size: 1.5em;
             font-weight: bold;
             color: #667eea;
         }
 
         .byte-label {
-            font-size: 0.9em;
+            font-size: 0.8em;
             color: #666;
             margin-top: 5px;
         }
@@ -220,13 +224,131 @@
             font-size: 0.9em;
             color: #666;
         }
+
+        /* Фильтры */
+        .filters-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .filter-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #e0e0e0;
+        }
+
+        .filter-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .filter-can-id {
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        /* Блоки CAN ID */
+        .can-id-blocks {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .can-id-block {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+        }
+
+        .can-id-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .byte-inputs {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .byte-input {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .byte-input label {
+            font-size: 0.8em;
+            margin-bottom: 5px;
+        }
+
+        .remove-btn {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            padding: 8px 16px;
+            width: auto;
+        }
+
+        .add-btn {
+            background: linear-gradient(135deg, #1dd1a1 0%, #10ac84 100%);
+            padding: 8px 16px;
+            width: auto;
+        }
+
+        .controls-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .color-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+            border: 1px solid #ddd;
+        }
+
+        .chart-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        .mini-chart-container {
+            height: 200px;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+            font-style: italic;
+        }
+
+        .toggle-btn {
+            background: #6c757d;
+            padding: 8px 16px;
+            width: auto;
+            font-size: 0.9em;
+        }
     </style>
 </head>
 <body>
 <div class="container">
     <header>
         <h1>CAN Bus Analyzer</h1>
-        <div class="subtitle">Real-time CAN data analysis with UDS protocol support</div>
+        <div class="subtitle">Real-time CAN data analysis with advanced filtering</div>
         <div id="connectionStatus" class="status disconnected">Disconnected</div>
     </header>
 
@@ -256,71 +378,37 @@
             </div>
         </div>
 
-        <!-- Block 2: PID 0x200 Analysis -->
+        <!-- Block 2: Фильтры CAN ID -->
         <div class="section">
             <div class="section-title">
-                <span>PID 0x200 Analysis</span>
-                <span class="data-points">Points: <span id="pidPoints">0</span>/500</span>
+                <span>CAN ID Filters</span>
+                <span class="data-points">Active filters: <span id="filterCount">0</span></span>
             </div>
 
-            <div class="byte-display">
-                <div class="byte-box">
-                    <div class="byte-value" id="byte1Value">00</div>
-                    <div class="byte-label">Byte 1</div>
-                </div>
-                <div class="byte-box">
-                    <div class="byte-value" id="byte2Value">00</div>
-                    <div class="byte-label">Byte 2</div>
-                </div>
-                <div class="byte-box">
-                    <div class="byte-value" id="byte3Value">00</div>
-                    <div class="byte-label">Byte 3</div>
-                </div>
-                <div class="byte-box">
-                    <div class="byte-value" id="byte4Value">00</div>
-                    <div class="byte-label">Byte 4</div>
-                </div>
+            <div class="controls-row">
+                <input type="text" id="newFilterId" placeholder="0x200 (hex)">
+                <button class="add-btn" onclick="addFilter()">Add Filter</button>
             </div>
 
-            <div class="chart-header">
-                <h3>Byte Values Over Time</h3>
-                <div class="chart-stats">
-                    <span>Byte 1 Avg: <span id="byte1Avg">0</span></span>
-                    <span>Byte 2 Avg: <span id="byte2Avg">0</span></span>
-                </div>
-            </div>
-            <div class="chart-container">
-                <canvas id="pidChart"></canvas>
+            <div id="filtersContainer" class="filters-container">
+                <!-- Filters will be added here dynamically -->
             </div>
         </div>
 
-        <!-- Block 3: Byte Difference Analysis -->
+        <!-- Block 3: Блоки CAN ID с графиками -->
         <div class="section">
             <div class="section-title">
-                <span>Byte Difference Analysis</span>
-                <span class="data-points">Points: <span id="diffPoints">0</span>/500</span>
+                <span>CAN ID Analysis Blocks</span>
+                <span class="data-points">Blocks: <span id="blockCount">0</span></span>
             </div>
 
-            <div class="grid-2">
-                <div>
-                    <h3>Byte 1 - Byte 2 Difference</h3>
-                    <div class="chart-container">
-                        <canvas id="diffChart"></canvas>
-                    </div>
-                </div>
-                <div>
-                    <h3>Moving Average (Window: 10)</h3>
-                    <div class="chart-container">
-                        <canvas id="avgChart"></canvas>
-                    </div>
-                </div>
+            <div class="controls-row">
+                <input type="text" id="newBlockId" placeholder="0x200 (hex)">
+                <button class="add-btn" onclick="addCanIdBlock()">Add CAN ID Block</button>
             </div>
 
-            <div class="chart-stats" style="margin-top: 20px;">
-                <span>Current Diff: <span id="currentDiff">0</span></span>
-                <span>Moving Avg: <span id="movingAvg">0</span></span>
-                <span>Max Diff: <span id="maxDiff">0</span></span>
-                <span>Min Diff: <span id="minDiff">0</span></span>
+            <div id="canIdBlocks" class="can-id-blocks">
+                <!-- CAN ID blocks will be added here dynamically -->
             </div>
         </div>
     </div>
@@ -332,147 +420,441 @@
     let isConnected = false;
     let sentCount = 0;
 
-    // Data storage for charts
-    const MAX_POINTS = 500;
-    let pidData = {
-        labels: [],
-        byte1: [],
-        byte2: [],
-        byte3_4: []
-    };
+    // Data storage
+    const MAX_POINTS = 50;
+    const chartColors = [
+        'rgba(255, 99, 132, 1)',
+        'rgba(54, 162, 235, 1)',
+        'rgba(75, 192, 192, 1)',
+        'rgba(153, 102, 255, 1)',
+        'rgba(255, 159, 64, 1)',
+        'rgba(255, 205, 86, 1)',
+        'rgba(201, 203, 207, 1)',
+        'rgba(0, 200, 83, 1)'
+    ];
 
-    let diffData = {
-        labels: [],
-        differences: [],
-        movingAverages: []
-    };
+    // Фильтры
+    let filters = new Set();
+    let canIdBlocks = new Map(); // Map<canId, BlockData>
 
-    // Chart instances
-    let pidChart = null;
-    let diffChart = null;
-    let avgChart = null;
+    // Initialize
+    function init() {
+        loadFromLocalStorage();
+        updateFilterDisplay();
+        renderCanIdBlocks();
+        initCharts();
+    }
 
-    // Initialize charts
-    function initCharts() {
-        const ctx1 = document.getElementById('pidChart').getContext('2d');
-        pidChart = new Chart(ctx1, {
-            type: 'line',
-            data: {
-                labels: pidData.labels,
-                datasets: [
-                    {
-                        label: 'Byte 1',
-                        data: pidData.byte1,
-                        borderColor: 'rgba(255, 99, 132, 1)',
-                        backgroundColor: 'rgba(255, 99, 132, 0.1)',
-                        tension: 0.4,
-                        fill: false
-                    },
-                    {
-                        label: 'Byte 2',
-                        data: pidData.byte2,
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        backgroundColor: 'rgba(54, 162, 235, 0.1)',
-                        tension: 0.4,
-                        fill: false
-                    },
-                    {
-                        label: 'Bytes 3-4 (HiLo)',
-                        data: pidData.byte3_4,
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        backgroundColor: 'rgba(75, 192, 192, 0.1)',
-                        tension: 0.4,
-                        fill: false
+    // Local storage
+    function loadFromLocalStorage() {
+        const savedFilters = localStorage.getItem('canFilters');
+        if (savedFilters) {
+            try {
+                const filterArray = JSON.parse(savedFilters);
+                filters = new Set(filterArray);
+            } catch (e) {
+                console.error('Failed to load filters:', e);
+            }
+        }
+
+        const savedBlocks = localStorage.getItem('canIdBlocks');
+        if (savedBlocks) {
+            try {
+                const blocks = JSON.parse(savedBlocks);
+                canIdBlocks = new Map(Object.entries(blocks));
+                // Initialize chart data for each block
+                for (const [canId, block] of canIdBlocks) {
+                    if (!block.chartData) {
+                        block.chartData = {};
                     }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        display: true,
-                        title: {
-                            display: true,
-                            text: 'Time'
+                }
+            } catch (e) {
+                console.error('Failed to load blocks:', e);
+            }
+        }
+    }
+
+    function saveToLocalStorage() {
+        localStorage.setItem('canFilters', JSON.stringify(Array.from(filters)));
+
+        const blocksObj = {};
+        canIdBlocks.forEach((value, key) => {
+            // Don't save chart data to localStorage
+            const saveBlock = { ...value };
+            delete saveBlock.chartData;
+            blocksObj[key] = saveBlock;
+        });
+        localStorage.setItem('canIdBlocks', JSON.stringify(blocksObj));
+    }
+
+    // Filters management
+    function addFilter() {
+        const input = document.getElementById('newFilterId');
+        const canId = input.value.trim().toLowerCase();
+
+        if (!canId.match(/^0x[0-9a-f]+$/i)) {
+            alert('Invalid CAN ID format. Use hex like 0x200');
+            return;
+        }
+
+        if (filters.has(canId)) {
+            alert('Filter already exists');
+            return;
+        }
+
+        filters.add(canId);
+        input.value = '';
+        updateFilterDisplay();
+        saveToLocalStorage();
+    }
+
+    function removeFilter(canId) {
+        filters.delete(canId);
+        updateFilterDisplay();
+        saveToLocalStorage();
+    }
+
+    function updateFilterDisplay() {
+        const container = document.getElementById('filtersContainer');
+        container.innerHTML = '';
+
+        filters.forEach(canId => {
+            const filterElement = document.createElement('div');
+            filterElement.className = 'filter-item';
+            filterElement.innerHTML = `
+                    <div class="filter-header">
+                        <span class="filter-can-id">${canId}</span>
+                        <button class="remove-btn" onclick="removeFilter('${canId}')">×</button>
+                    </div>
+                    <div class="data-points">
+                        Frames: <span id="count-${canId}">0</span>
+                    </div>
+                `;
+            container.appendChild(filterElement);
+        });
+
+        document.getElementById('filterCount').textContent = filters.size;
+    }
+
+    // CAN ID Blocks management
+    function addCanIdBlock() {
+        const input = document.getElementById('newBlockId');
+        let canId = input.value.trim().toLowerCase();
+
+        if (!canId.match(/^0x[0-9a-f]+$/i)) {
+            alert('Invalid CAN ID format. Use hex like 0x200');
+            return;
+        }
+
+        if (canIdBlocks.has(canId)) {
+            alert('Block already exists');
+            return;
+        }
+
+        // Initialize block configuration
+        const blockConfig = {
+            canId: canId,
+            byteConfigs: Array(8).fill(''), // Empty configs for 8 bytes
+            enabled: true,
+            chartData: {}, // Will store data for each configured chart
+            frameCount: 0
+        };
+
+        canIdBlocks.set(canId, blockConfig);
+        input.value = '';
+        renderCanIdBlocks();
+        saveToLocalStorage();
+    }
+
+    function removeCanIdBlock(canId) {
+        // Clean up chart resources
+        const block = canIdBlocks.get(canId);
+        if (block) {
+            // Destroy any charts
+            for (const chartId in block.chartData) {
+                if (block.chartData[chartId].chart) {
+                    block.chartData[chartId].chart.destroy();
+                }
+            }
+        }
+
+        canIdBlocks.delete(canId);
+        renderCanIdBlocks();
+        saveToLocalStorage();
+    }
+
+    function updateByteConfig(canId, byteIndex, config) {
+        const block = canIdBlocks.get(canId);
+        if (block) {
+            block.byteConfigs[byteIndex] = config.trim();
+
+            // Update chart data structure
+            updateChartDataStructure(block);
+            renderCanIdBlocks();
+            saveToLocalStorage();
+        }
+    }
+
+    function updateChartDataStructure(block) {
+        // Parse all byte configs and create appropriate chart data structures
+        const chartKeys = new Set();
+
+        for (let i = 0; i < block.byteConfigs.length; i++) {
+            const config = block.byteConfigs[i];
+            if (!config) continue;
+
+            const parsed = parseByteConfig(config);
+            if (parsed) {
+                chartKeys.add(parsed.key);
+            }
+        }
+
+        // Initialize or cleanup chart data
+        for (const key of chartKeys) {
+            if (!block.chartData[key]) {
+                block.chartData[key] = {
+                    labels: [],
+                    data: [],
+                    chart: null,
+                    type: 'byte' // byte, word, float
+                };
+            }
+        }
+
+        // Remove unused chart data
+        for (const key in block.chartData) {
+            if (!chartKeys.has(key)) {
+                if (block.chartData[key].chart) {
+                    block.chartData[key].chart.destroy();
+                }
+                delete block.chartData[key];
+            }
+        }
+    }
+
+    function parseByteConfig(config) {
+        // Patterns:
+        // "0" -> single byte
+        // "2-3(U)" -> unsigned word (bytes 2-3, HiLo)
+        // "0-3(F,2)" -> float (bytes 0-3, 2 decimal places)
+
+        const singleBytePattern = /^(\d+)$/;
+        const wordPattern = /^(\d+)-(\d+)\(U\)$/i;
+        const floatPattern = /^(\d+)-(\d+)\(F,(\d+)\)$/i;
+
+        let match;
+
+        if ((match = config.match(singleBytePattern))) {
+            const byteIndex = parseInt(match[1]);
+            if (byteIndex >= 0 && byteIndex <= 7) {
+                return {
+                    type: 'byte',
+                    key: `byte${byteIndex}`,
+                    byteIndex: byteIndex,
+                    decimalPlaces: 0
+                };
+            }
+        } else if ((match = config.match(wordPattern))) {
+            const start = parseInt(match[1]);
+            const end = parseInt(match[2]);
+            if (start >= 0 && end <= 7 && end - start === 1) {
+                return {
+                    type: 'word',
+                    key: `word${start}-${end}`,
+                    startByte: Math.min(start, end),
+                    endByte: Math.max(start, end),
+                    decimalPlaces: 0
+                };
+            }
+        } else if ((match = config.match(floatPattern))) {
+            const start = parseInt(match[1]);
+            const end = parseInt(match[2]);
+            const decimals = parseInt(match[3]);
+            if (start >= 0 && end <= 7 && end - start === 3) {
+                return {
+                    type: 'float',
+                    key: `float${start}-${end}`,
+                    startByte: Math.min(start, end),
+                    endByte: Math.max(start, end),
+                    decimalPlaces: decimals
+                };
+            }
+        }
+
+        return null; // Invalid config
+    }
+
+    function renderCanIdBlocks() {
+        const container = document.getElementById('canIdBlocks');
+        container.innerHTML = '';
+
+        canIdBlocks.forEach((block, canId) => {
+            const blockElement = document.createElement('div');
+            blockElement.className = 'can-id-block';
+            blockElement.id = `block-${canId}`;
+
+            let byteInputs = '';
+            for (let i = 0; i < 8; i++) {
+                byteInputs += `
+                        <div class="byte-input">
+                            <label>Byte ${i}</label>
+                            <input type="text"
+                                   value="${block.byteConfigs[i] || ''}"
+                                   placeholder="0, 2-3(U), 0-3(F,2)"
+                                   onchange="updateByteConfig('${canId}', ${i}, this.value)">
+                        </div>
+                    `;
+            }
+
+            blockElement.innerHTML = `
+                    <div class="can-id-header">
+                        <div>
+                            <span style="font-weight: bold; font-size: 1.2em;">${canId}</span>
+                            <span class="data-points" style="margin-left: 10px;">
+                                Frames: <span id="frame-count-${canId}">${block.frameCount}</span>
+                            </span>
+                        </div>
+                        <div class="controls-row">
+                            <button class="toggle-btn" onclick="toggleBlock('${canId}')">
+                                ${block.enabled ? 'Disable' : 'Enable'}
+                            </button>
+                            <button class="remove-btn" onclick="removeCanIdBlock('${canId}')">Remove</button>
+                        </div>
+                    </div>
+
+                    <div class="byte-inputs">
+                        ${byteInputs}
+                    </div>
+
+                    <div class="chart-grid">
+                        ${renderChartsForBlock(block)}
+                    </div>
+                `;
+
+            container.appendChild(blockElement);
+        });
+
+        document.getElementById('blockCount').textContent = canIdBlocks.size;
+
+        // Initialize charts for each block
+        setTimeout(() => {
+            canIdBlocks.forEach((block, canId) => {
+                initChartsForBlock(block, canId);
+            });
+        }, 100);
+    }
+
+    function renderChartsForBlock(block) {
+        if (Object.keys(block.chartData).length === 0) {
+            return '<div class="no-data">No charts configured. Configure byte inputs to display charts.</div>';
+        }
+
+        let chartsHTML = '';
+        let chartIndex = 0;
+
+        for (const [key, chartData] of Object.entries(block.chartData)) {
+            chartsHTML += `
+                    <div class="chart-container mini-chart-container">
+                        <div class="chart-header">
+                            <h4>${getChartTitle(key, chartData.type)}</h4>
+                            <div class="chart-stats">
+                                <span>Points: ${chartData.data.length}</span>
+                                <span id="last-value-${key}">0</span>
+                            </div>
+                        </div>
+                        <canvas id="chart-${block.canId}-${key}"></canvas>
+                    </div>
+                `;
+            chartIndex++;
+        }
+
+        return chartsHTML;
+    }
+
+    function getChartTitle(key, type) {
+        switch (type) {
+            case 'byte':
+                const byteNum = key.replace('byte', '');
+                return `Byte ${byteNum}`;
+            case 'word':
+                const bytes = key.replace('word', '');
+                return `Bytes ${bytes} (U)`;
+            case 'float':
+                const floatBytes = key.replace('float', '');
+                return `Bytes ${floatBytes} (Float)`;
+            default:
+                return key;
+        }
+    }
+
+    function initChartsForBlock(block, canId) {
+        for (const [key, chartData] of Object.entries(block.chartData)) {
+            const canvasId = `chart-${canId}-${key}`;
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) continue;
+
+            const ctx = canvas.getContext('2d');
+
+            // Destroy existing chart
+            if (chartData.chart) {
+                chartData.chart.destroy();
+            }
+
+            // Create new chart
+            chartData.chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartData.labels,
+                    datasets: [{
+                        label: key,
+                        data: chartData.data,
+                        borderColor: chartColors[Object.keys(block.chartData).indexOf(key) % chartColors.length],
+                        backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: false,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {
+                        duration: 0 // Disable animation for performance
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
                         }
                     },
-                    y: {
-                        display: true,
-                        title: {
-                            display: true,
-                            text: 'Value'
+                    scales: {
+                        x: {
+                            display: false
                         },
-                        suggestedMin: 0,
-                        suggestedMax: 255
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'top'
+                        y: {
+                            display: true,
+                            beginAtZero: false,
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            }
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
                     }
                 }
-            }
-        });
+            });
+        }
+    }
 
-        const ctx2 = document.getElementById('diffChart').getContext('2d');
-        diffChart = new Chart(ctx2, {
-            type: 'line',
-            data: {
-                labels: diffData.labels,
-                datasets: [{
-                    label: 'Byte1 - Byte2',
-                    data: diffData.differences,
-                    borderColor: 'rgba(153, 102, 255, 1)',
-                    backgroundColor: 'rgba(153, 102, 255, 0.1)',
-                    tension: 0.4,
-                    fill: false
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: { display: true, title: { display: true, text: 'Time' } },
-                    y: {
-                        display: true,
-                        title: { display: true, text: 'Difference' },
-                        suggestedMin: -255,
-                        suggestedMax: 255
-                    }
-                }
-            }
-        });
-
-        const ctx3 = document.getElementById('avgChart').getContext('2d');
-        avgChart = new Chart(ctx3, {
-            type: 'line',
-            data: {
-                labels: diffData.labels,
-                datasets: [{
-                    label: 'Moving Average',
-                    data: diffData.movingAverages,
-                    borderColor: 'rgba(255, 159, 64, 1)',
-                    backgroundColor: 'rgba(255, 159, 64, 0.1)',
-                    tension: 0.4,
-                    fill: false
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: { display: true, title: { display: true, text: 'Time' } },
-                    y: {
-                        display: true,
-                        title: { display: true, text: 'Average' },
-                        suggestedMin: -255,
-                        suggestedMax: 255
-                    }
-                }
-            }
-        });
+    function toggleBlock(canId) {
+        const block = canIdBlocks.get(canId);
+        if (block) {
+            block.enabled = !block.enabled;
+            saveToLocalStorage();
+            renderCanIdBlocks();
+        }
     }
 
     // WebSocket functions
@@ -540,94 +922,108 @@
 
     // Handle incoming WebSocket messages
     function handleWebSocketMessage(data) {
-        if (data.type === 'can_frame' && data.id === '0x200') {
-            processPID200(data);
+        if (data.type === 'can_frame') {
+            processCANFrame(data);
         } else if (data.type === 'ack') {
             console.log('ACK received:', data.message);
         }
     }
 
-    // Process PID 0x200 data
-    function processPID200(frame) {
+    // Process CAN frame data
+    function processCANFrame(frame) {
+        const canId = frame.id.toLowerCase();
         const data = hexToBytes(frame.data);
-        if (data.length < 4) return;
-
-        // Extract bytes
-        const byte1 = data[0];
-        const byte2 = data[1];
-        const byte3 = data[2];
-        const byte4 = data[3];
-        const byte3_4 = (byte3 << 8) | byte4;
-
-        // Update display
-        document.getElementById('byte1Value').textContent = byte1.toString(16).padStart(2, '0').toUpperCase();
-        document.getElementById('byte2Value').textContent = byte2.toString(16).padStart(2, '0').toUpperCase();
-        document.getElementById('byte3Value').textContent = byte3.toString(16).padStart(2, '0').toUpperCase();
-        document.getElementById('byte4Value').textContent = byte4.toString(16).padStart(2, '0').toUpperCase();
-
-        // Add data point
         const timestamp = new Date().toLocaleTimeString();
 
-        // PID chart data
-        pidData.labels.push(timestamp);
-        pidData.byte1.push(byte1);
-        pidData.byte2.push(byte2);
-        pidData.byte3_4.push(byte3_4);
-
-        // Limit data points
-        if (pidData.labels.length > MAX_POINTS) {
-            pidData.labels.shift();
-            pidData.byte1.shift();
-            pidData.byte2.shift();
-            pidData.byte3_4.shift();
+        // Update filter counter if this CAN ID is filtered
+        if (filters.has(canId)) {
+            const countElem = document.getElementById(`count-${canId}`);
+            if (countElem) {
+                const current = parseInt(countElem.textContent) || 0;
+                countElem.textContent = current + 1;
+            }
         }
 
-        // Update averages
-        updateAverages();
+        // Process CAN ID blocks
+        const block = canIdBlocks.get(canId);
+        if (block && block.enabled) {
+            block.frameCount++;
+            document.getElementById(`frame-count-${canId}`).textContent = block.frameCount;
 
-        // Update chart
-        pidChart.update();
-        document.getElementById('pidPoints').textContent = pidData.labels.length;
+            // Process each byte configuration
+            for (let i = 0; i < block.byteConfigs.length; i++) {
+                const config = block.byteConfigs[i];
+                if (!config || data.length <= i) continue;
 
-        // Calculate difference
-        const diff = byte1 - byte2;
+                const parsedConfig = parseByteConfig(config);
+                if (!parsedConfig) continue;
 
-        // Difference chart data
-        diffData.labels.push(timestamp);
-        diffData.differences.push(diff);
+                // Calculate value based on configuration
+                let value = 0;
 
-        // Calculate moving average
-        const windowSize = 10;
-        const startIndex = Math.max(0, diffData.differences.length - windowSize);
-        const windowData = diffData.differences.slice(startIndex);
-        const movingAvg = windowData.reduce((a, b) => a + b, 0) / windowData.length;
-        diffData.movingAverages.push(movingAvg);
+                switch (parsedConfig.type) {
+                    case 'byte':
+                        if (data.length > parsedConfig.byteIndex) {
+                            value = data[parsedConfig.byteIndex];
+                        }
+                        break;
+                    case 'word':
+                        if (data.length > parsedConfig.endByte) {
+                            value = (data[parsedConfig.startByte] << 8) | data[parsedConfig.endByte];
+                        }
+                        break;
+                    case 'float':
+                        if (data.length > parsedConfig.endByte) {
+                            // Create a DataView to interpret bytes as float
+                            const buffer = new ArrayBuffer(4);
+                            const view = new DataView(buffer);
+                            // Assuming HiLo byte order
+                            view.setUint8(0, data[parsedConfig.startByte]);
+                            view.setUint8(1, data[parsedConfig.startByte + 1]);
+                            view.setUint8(2, data[parsedConfig.startByte + 2]);
+                            view.setUint8(3, data[parsedConfig.startByte + 3]);
+                            value = view.getFloat32(0, false); // Big-endian (HiLo)
+                            value = parseFloat(value.toFixed(parsedConfig.decimalPlaces));
+                        }
+                        break;
+                }
 
-        // Limit data points
-        if (diffData.labels.length > MAX_POINTS) {
-            diffData.labels.shift();
-            diffData.differences.shift();
-            diffData.movingAverages.shift();
-        }
+                // Update chart data
+                const chartKey = parsedConfig.key;
+                if (!block.chartData[chartKey]) {
+                    block.chartData[chartKey] = {
+                        labels: [],
+                        data: [],
+                        chart: null,
+                        type: parsedConfig.type
+                    };
+                }
 
-        // Update stats
-        document.getElementById('currentDiff').textContent = diff;
-        document.getElementById('movingAvg').textContent = movingAvg.toFixed(2);
-        document.getElementById('maxDiff').textContent = Math.max(...diffData.differences);
-        document.getElementById('minDiff').textContent = Math.min(...diffData.differences);
+                const chartData = block.chartData[chartKey];
 
-        // Update charts
-        diffChart.update();
-        avgChart.update();
-        document.getElementById('diffPoints').textContent = diffData.labels.length;
-    }
+                // Add new data point
+                chartData.labels.push(timestamp);
+                chartData.data.push(value);
 
-    function updateAverages() {
-        if (pidData.byte1.length > 0) {
-            const byte1Avg = pidData.byte1.reduce((a, b) => a + b, 0) / pidData.byte1.length;
-            const byte2Avg = pidData.byte2.reduce((a, b) => a + b, 0) / pidData.byte2.length;
-            document.getElementById('byte1Avg').textContent = byte1Avg.toFixed(2);
-            document.getElementById('byte2Avg').textContent = byte2Avg.toFixed(2);
+                // Limit to MAX_POINTS
+                if (chartData.labels.length > MAX_POINTS) {
+                    chartData.labels.shift();
+                    chartData.data.shift();
+                }
+
+                // Update last value display
+                const lastValueElem = document.getElementById(`last-value-${chartKey}`);
+                if (lastValueElem) {
+                    lastValueElem.textContent = value.toFixed(parsedConfig.decimalPlaces);
+                }
+
+                // Update chart
+                if (chartData.chart) {
+                    chartData.chart.data.labels = chartData.labels;
+                    chartData.chart.data.datasets[0].data = chartData.data;
+                    chartData.chart.update('none'); // 'none' for better performance
+                }
+            }
         }
     }
 
@@ -679,12 +1075,53 @@
         return bytes.map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
+    // Initialize charts (legacy function, keeping for compatibility)
+    function initCharts() {
+        // This is now handled by initChartsForBlock
+    }
+
     // Initialize on load
     window.onload = function() {
-        initCharts();
+        init();
         // Auto-connect after 1 second
         setTimeout(connectWebSocket, 1000);
     };
+
+    // Cleanup on page unload to prevent memory leaks
+    window.addEventListener('beforeunload', function() {
+        // Clean up all charts
+        canIdBlocks.forEach(block => {
+            for (const key in block.chartData) {
+                if (block.chartData[key].chart) {
+                    block.chartData[key].chart.destroy();
+                }
+            }
+        });
+
+        // Close WebSocket
+        if (ws) {
+            ws.close();
+        }
+    });
+
+    // Periodically clean up memory
+    setInterval(function() {
+        // Force garbage collection by creating memory pressure
+        if (window.gc) {
+            window.gc();
+        }
+
+        // Limit the number of stored frames in each chart
+        canIdBlocks.forEach(block => {
+            for (const key in block.chartData) {
+                const chartData = block.chartData[key];
+                if (chartData.labels.length > MAX_POINTS * 2) {
+                    chartData.labels = chartData.labels.slice(-MAX_POINTS);
+                    chartData.data = chartData.data.slice(-MAX_POINTS);
+                }
+            }
+        });
+    }, 30000); // Every 30 seconds
 </script>
 </body>
 </html>
