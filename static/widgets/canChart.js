@@ -26,7 +26,7 @@ export class CanChartWidget {
                 <div>
                     <strong>${this.canId}</strong>
                     <span class="data-points" style="margin-left: 10px;">
-                        Frames: <span id="frame-count-${this.escapeId(this.canId)}">${this.frameCount}</span>
+                        Frames: <span id="frame-count-${this.id}">${this.frameCount}</span>
                     </span>
                 </div>
                 <div class="controls-row">
@@ -42,42 +42,15 @@ export class CanChartWidget {
         `;
 
         this.element = widgetElement;
-        this.initCharts();
         this.attachEventListeners();
         return widgetElement;
     }
 
-    renderCharts() {
-        if (Object.keys(this.chartData).length === 0) {
-            return '<div class="no-data">No charts configured. Configure byte inputs in settings.</div>';
-        }
-
-        let chartsHTML = '';
-        for (const [key, data] of Object.entries(this.chartData)) {
-            const safeKey = this.escapeId(key);
-            chartsHTML += `
-                <div class="chart-container mini-chart-container">
-                    <div class="chart-header">
-                        <h4>${this.getChartTitle(key, data.type)}</h4>
-                        <div class="chart-stats">
-                            <span>Points: ${data.data.length}</span>
-                            <span id="last-value-${this.id}-${safeKey}">0</span>
-                        </div>
-                    </div>
-                    <canvas id="chart-${this.id}-${safeKey}"></canvas>
-                </div>
-            `;
-        }
-        return chartsHTML;
-    }
-
+    // Отдельный метод для инициализации графиков после добавления в DOM
     initCharts() {
         for (const [key, data] of Object.entries(this.chartData)) {
-            const safeKey = this.escapeId(key);
-            const canvasId = `chart-${this.id}-${safeKey}`;
-
-            // Use getElementById instead of querySelector to avoid CSS escaping issues
-            const canvas = document.getElementById(canvasId);
+            const canvasId = `chart-${this.id}-${key}`;
+            const canvas = this.element.querySelector(`#${canvasId}`);
             if (!canvas) {
                 console.warn(`Canvas element not found: ${canvasId}`);
                 continue;
@@ -122,6 +95,31 @@ export class CanChartWidget {
         }
     }
 
+    renderCharts() {
+        if (Object.keys(this.chartData).length === 0) {
+            return '<div class="no-data">No charts configured. Configure byte inputs in settings.</div>';
+        }
+
+        let chartsHTML = '';
+        for (const [key, data] of Object.entries(this.chartData)) {
+            // Используем безопасный ключ для ID
+            const safeKey = key.replace(/[()]/g, '');
+            chartsHTML += `
+                <div class="chart-container mini-chart-container">
+                    <div class="chart-header">
+                        <h4>${this.getChartTitle(key, data.type)}</h4>
+                        <div class="chart-stats">
+                            <span>Points: ${data.data.length}</span>
+                            <span id="last-value-${this.id}-${safeKey}">0</span>
+                        </div>
+                    </div>
+                    <canvas id="chart-${this.id}-${safeKey}"></canvas>
+                </div>
+            `;
+        }
+        return chartsHTML;
+    }
+
     attachEventListeners() {
         const toggleBtn = this.element.querySelector('.toggle-btn');
         const removeBtn = this.element.querySelector('.remove-btn');
@@ -164,7 +162,7 @@ export class CanChartWidget {
         if (!this.enabled) return;
 
         this.frameCount++;
-        const frameCountElem = document.getElementById(`frame-count-${this.escapeId(this.canId)}`);
+        const frameCountElem = this.element.querySelector(`#frame-count-${this.id}`);
         if (frameCountElem) {
             frameCountElem.textContent = this.frameCount;
         }
@@ -207,7 +205,7 @@ export class CanChartWidget {
             if (start >= 0 && end <= 7 && end - start === 1) {
                 return {
                     type: 'word',
-                    key: `word${start}-${end}S`, // Убрали скобки
+                    key: `word${start}-${end}(S)`,
                     startByte: Math.min(start, end),
                     endByte: Math.max(start, end),
                     signed: true,
@@ -220,7 +218,7 @@ export class CanChartWidget {
             if (start >= 0 && end <= 7 && end - start === 1) {
                 return {
                     type: 'word',
-                    key: `word${start}-${end}U`, // Убрали скобки
+                    key: `word${start}-${end}(U)`,
                     startByte: Math.min(start, end),
                     endByte: Math.max(start, end),
                     signed: false,
@@ -285,6 +283,9 @@ export class CanChartWidget {
     }
 
     updateChartData(key, value, timestamp, config) {
+        // Создаем безопасный ключ для DOM элементов
+        const safeKey = key.replace(/[()]/g, '');
+
         if (!this.chartData[key]) {
             this.chartData[key] = {
                 labels: [],
@@ -303,8 +304,7 @@ export class CanChartWidget {
             chart.data.shift();
         }
 
-        const safeKey = this.escapeId(key);
-        const lastValueElem = document.getElementById(`last-value-${this.id}-${safeKey}`);
+        const lastValueElem = this.element.querySelector(`#last-value-${this.id}-${safeKey}`);
         if (lastValueElem) {
             lastValueElem.textContent = value.toFixed(config.decimalPlaces);
         }
@@ -356,14 +356,12 @@ export class CanChartWidget {
                 const byteNum = key.replace('byte', '');
                 return `Byte ${byteNum}`;
             case 'word':
-                if (key.includes('U')) {
-                    const bytes = key.replace('word', '').replace('U', '');
+                if (key.includes('(U)')) {
+                    const bytes = key.replace('word', '').replace('(U)', '');
                     return `Bytes ${bytes} (Unsigned)`;
-                } else if (key.includes('S')) {
-                    const bytes = key.replace('word', '').replace('S', '');
-                    return `Bytes ${bytes} (Signed)`;
                 } else {
-                    return `Bytes ${key.replace('word', '')}`;
+                    const bytes = key.replace('word', '').replace('(S)', '');
+                    return `Bytes ${bytes} (Signed)`;
                 }
             case 'float':
                 const floatBytes = key.replace('float', '');
@@ -371,10 +369,5 @@ export class CanChartWidget {
             default:
                 return key;
         }
-    }
-
-    // Helper method to escape special characters for use in IDs
-    escapeId(id) {
-        return id.replace(/[()]/g, '');
     }
 }

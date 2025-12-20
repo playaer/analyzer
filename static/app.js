@@ -166,6 +166,9 @@ function saveWidget() {
         const container = document.getElementById('widgetsContainer');
         container.appendChild(widget.render());
 
+        // Инициализировать графики после добавления в DOM
+        setTimeout(() => widget.initCharts(), 100);
+
         // Store reference
         widgets.set(widgetId, widget);
         widget.onRemove = (id) => {
@@ -215,6 +218,8 @@ function loadWidgetsFromLocalStorage() {
                     const container = document.getElementById('widgetsContainer');
                     if (container) {
                         container.appendChild(widget.render());
+                        // Инициализировать графики после добавления в DOM
+                        setTimeout(() => widget.initCharts(), 100);
                     }
                     widgets.set(data.id, widget);
                     widget.onRemove = (id) => {
