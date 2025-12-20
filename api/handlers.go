@@ -85,15 +85,9 @@ func (h *APIHandler) addFilter(w http.ResponseWriter, r *http.Request) {
 	err := h.db.QueryRow("SELECT id FROM filters WHERE can_id = ?", f.CANID).Scan(&existingID)
 
 	if err == nil {
-		// Filter exists, update it
-		enabledValue := 0
-		if f.Enabled {
-			enabledValue = 1
-		}
-
 		_, err = h.db.Exec(
 			"UPDATE filters SET mask = ?, enabled = ? WHERE id = ?",
-			f.Mask, enabledValue, existingID,
+			f.Mask, f.Enabled, existingID,
 		)
 		if err != nil {
 			h.log.Error().Err(err).Msg("Failed to update filter")
@@ -202,37 +196,46 @@ func (h *APIHandler) deleteFilter(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *APIHandler) getFilters(w http.ResponseWriter, r *http.Request) {
-	h.log.Info().Msg("Fetching filters from database")
+	// 1. Логируем начало
+	h.log.Info().Msg("[DEBUG] Start fetching filters from DB")
 
 	rows, err := h.db.Query("SELECT id, can_id, mask, enabled FROM filters")
 	if err != nil {
-		h.log.Error().Err(err).Msg("Failed to query filters")
+		// 2. Логируем ошибку запроса
+		h.log.Error().Err(err).Msg("[DEBUG] FAILED to execute SQL query:" + err.Error())
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 	defer rows.Close()
 
+	// 3. Логируем структуру таблицы (необязательно, но полезно)
+	// h.log.Debug().Msg("[DEBUG] SQL Query executed successfully")
+
 	filters := []Filter{}
+	rowCount := 0
 	for rows.Next() {
+		rowCount++
 		var f Filter
-		var enabledInt int
-		if err := rows.Scan(&f.ID, &f.CANID, &f.Mask, &enabledInt); err != nil {
-			h.log.Error().Err(err).Msg("Failed to scan filter")
+		if err := rows.Scan(&f.ID, &f.CANID, &f.Mask, &f.Enabled); err != nil {
+			// 4. Логируем ошибку при чтении каждой строки
+			h.log.Error().Err(err).Int("row", rowCount).Msg("[DEBUG] FAILED to scan row")
 			continue
 		}
-		f.Enabled = enabledInt == 1
+		// 5. Логируем содержимое каждой успешно прочитанной строки
+		h.log.Info().Int("id", f.ID).Uint32("can_id", f.CANID).Bool("enabled", f.Enabled).Msg("[DEBUG] Filter row")
 		filters = append(filters, f)
-		h.log.Info().Uint32("can_id", f.CANID).Bool("enabled", f.Enabled).Msg("Found filter")
 	}
 
+	// 6. Логируем итоговое количество найденных строк
+	h.log.Info().Int("rows_processed", rowCount).Int("filters_in_slice", len(filters)).Msg("[DEBUG] Rows processing complete")
+
 	if err := rows.Err(); err != nil {
-		h.log.Error().Err(err).Msg("Error iterating filters")
+		h.log.Error().Err(err).Msg("[DEBUG] Error iterating over rows")
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
 	h.log.Info().Int("count", len(filters)).Msg("Returning filters")
-
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(filters); err != nil {
 		h.log.Error().Err(err).Msg("Failed to encode filters")
@@ -253,14 +256,9 @@ func (h *APIHandler) updateFilter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	enabledValue := 0
-	if f.Enabled {
-		enabledValue = 1
-	}
-
 	_, err = h.db.Exec(
 		"UPDATE filters SET can_id = ?, mask = ?, enabled = ? WHERE id = ?",
-		f.CANID, f.Mask, enabledValue, id,
+		f.CANID, f.Mask, f.Enabled, id,
 	)
 	if err != nil {
 		h.log.Error().Err(err).Msg("Failed to update filter")
