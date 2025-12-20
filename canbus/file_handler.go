@@ -89,7 +89,7 @@ func (h *FileHandler) readLoop(broadcastFunc func([]byte)) {
 					line := scanner.Text()
 					frame, err := parseLine(line)
 					if err != nil {
-						h.log.Debug().Str("line", line).Msg("Skipping invalid line")
+						//h.log.Debug().Str("line", line).Msg("Skipping invalid line")
 						continue
 					}
 
