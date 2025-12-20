@@ -3,13 +3,15 @@ import { initWebSocket, connectWebSocket, disconnectWebSocket, sendWebSocketMess
 import { initFilters, addFilter, removeFilter, updateFilterDisplay, filters } from './filters.js';
 import { initWidgets, renderCanIdBlocks, processCANFrameForWidgets, canIdBlocks } from './widgets.js';
 import { initSender, sendCANFrame } from './sender.js';
-import { loadFromLocalStorage, saveToLocalStorage } from './utils.js';
+import { loadFromLocalStorage } from './utils.js';
 
 // DOM Elements
 let connectBtn, disconnectBtn, newFilterInput, newBlockInput;
 
 // Initialize the application
 export async function init() {
+    console.log('Initializing application...');
+
     // Cache DOM elements
     connectBtn = document.getElementById('connectBtn');
     disconnectBtn = document.getElementById('disconnectBtn');
@@ -26,6 +28,7 @@ export async function init() {
     connectBtn.addEventListener('click', () => {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${protocol}//${window.location.host}/ws`;
+        console.log('Connecting to WebSocket:', wsUrl);
         connectWebSocket(wsUrl);
     });
 
@@ -35,17 +38,33 @@ export async function init() {
     const addBlockBtn = document.querySelector('#canIdBlocks').parentElement.querySelector('.add-btn');
 
     addFilterBtn.addEventListener('click', () => {
-        addFilter(newFilterInput.value.trim().toLowerCase());
+        const value = newFilterInput.value.trim().toLowerCase();
+        if (value) {
+            addFilter(value);
+        }
     });
 
     addBlockBtn.addEventListener('click', () => {
-        addCanIdBlock(newBlockInput.value.trim().toLowerCase());
+        const value = newBlockInput.value.trim().toLowerCase();
+        if (value) {
+            addCanIdBlock(value);
+        }
     });
 
-    // Load from localStorage
-    loadFromLocalStorage();
+    // Load blocks from localStorage
+    const savedBlocks = loadFromLocalStorage();
+    if (savedBlocks && Object.keys(savedBlocks).length > 0) {
+        Object.entries(savedBlocks).forEach(([canId, block]) => {
+            canIdBlocks.set(canId, {
+                ...block,
+                chartData: {},
+                frameCount: 0
+            });
+        });
+    }
 
     // Load filters from server
+    console.log('Loading filters from server...');
     await updateFilterDisplay();
 
     // Render CAN ID blocks
@@ -55,6 +74,7 @@ export async function init() {
     setTimeout(() => {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${protocol}//${window.location.host}/ws`;
+        console.log('Auto-connecting to WebSocket...');
         connectWebSocket(wsUrl);
     }, 1000);
 }
@@ -71,9 +91,11 @@ function handleWebSocketMessage(data) {
 // Process CAN frame data
 function processCANFrame(frame) {
     const canId = frame.id.toLowerCase();
+    const canIdNum = parseInt(canId, 16);
 
     // Apply filtering - only process frames that pass the filter
-    if (filters.size > 0 && !filters.has(canId)) {
+    if (filters.size > 0 && !filters.has(canIdNum)) {
+        console.log(`Frame filtered out: ${canId}`);
         return; // Skip this frame, it's filtered out
     }
 
@@ -85,7 +107,7 @@ function processCANFrame(frame) {
     }
 
     // Process frame for widgets
-    processCANFrameForWidgets(frame, filters);
+    processCANFrameForWidgets(frame);
 }
 
 // Update connection status
@@ -105,7 +127,7 @@ function updateConnectionStatus(connected) {
     }
 }
 
-// Function to add CAN ID block (re-exported from widgets)
+// Function to add CAN ID block
 function addCanIdBlock(canId) {
     if (!canId.match(/^0x[0-9a-f]+$/i)) {
         alert('Invalid CAN ID format. Use hex like 0x200');
@@ -129,7 +151,16 @@ function addCanIdBlock(canId) {
     canIdBlocks.set(canId, blockConfig);
     newBlockInput.value = '';
     renderCanIdBlocks();
-    saveToLocalStorage();
+
+    // Save to localStorage
+    const blocksObj = {};
+    canIdBlocks.forEach((value, key) => {
+        const saveBlock = { ...value };
+        delete saveBlock.chartData;
+        delete saveBlock.frameCount;
+        blocksObj[key] = saveBlock;
+    });
+    localStorage.setItem('canIdBlocks', JSON.stringify(blocksObj));
 }
 
 // Expose functions to window for inline event handlers

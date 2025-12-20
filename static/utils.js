@@ -27,22 +27,13 @@ export function bytesToHex(bytes) {
 
 // Load from localStorage
 export function loadFromLocalStorage() {
-    const savedBlocks = localStorage.getItem('canIdBlocks');
-    if (savedBlocks) {
-        try {
-            const blocks = JSON.parse(savedBlocks);
-            // Note: This needs to be imported in the main app
-            // and set to the canIdBlocks Map
-            return blocks;
-        } catch (e) {
-            console.error('Failed to load from localStorage:', e);
+    try {
+        const savedBlocks = localStorage.getItem('canIdBlocks');
+        if (savedBlocks) {
+            return JSON.parse(savedBlocks);
         }
+    } catch (e) {
+        console.error('Failed to load from localStorage:', e);
     }
     return {};
-}
-
-// Save to localStorage
-export function saveToLocalStorage() {
-    // Note: This function needs access to canIdBlocks
-    // It should be called from the main app
 }

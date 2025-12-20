@@ -1,28 +1,31 @@
 // Filters module
-export let filters = new Set();
+export let filters = new Set(); // Set<number> - храним числовые CAN ID
 
 // Initialize filters module
 export function initFilters() {
-    // Additional initialization if needed
+    console.log('Filters module initialized');
 }
 
 // Add a filter
 export async function addFilter(canIdStr) {
+    console.log('Adding filter:', canIdStr);
+
     if (!canIdStr.match(/^0x[0-9a-f]+$/i)) {
         alert('Invalid CAN ID format. Use hex like 0x200');
         return;
     }
 
-    if (filters.has(canIdStr)) {
+    const canIdNum = parseInt(canIdStr, 16);
+    console.log('CAN ID number:', canIdNum);
+
+    if (filters.has(canIdNum)) {
         alert('Filter already exists');
         return;
     }
 
     try {
-        // Convert hex string to number
-        const canIdNum = parseInt(canIdStr, 16);
-
         // Save to server
+        console.log('Saving filter to server...');
         const response = await fetch('/api/filters', {
             method: 'POST',
             headers: {
@@ -37,13 +40,16 @@ export async function addFilter(canIdStr) {
 
         if (!response.ok) {
             const errorText = await response.text();
-            throw new Error(`Server error: ${errorText}`);
+            console.error('Server error:', errorText);
+            throw new Error(`Server error: ${response.status} ${errorText}`);
         }
+
+        const savedFilter = await response.json();
+        console.log('Filter saved to server:', savedFilter);
 
         // Reload filters from server
         await updateFilterDisplay();
 
-        console.log('Filter saved to server');
     } catch (error) {
         console.error('Error saving filter:', error);
         alert('Failed to save filter to server: ' + error.message);
@@ -51,10 +57,12 @@ export async function addFilter(canIdStr) {
 }
 
 // Remove a filter
-export async function removeFilter(canId) {
+export async function removeFilter(canIdHex) {
+    console.log('Removing filter:', canIdHex);
+
     try {
         // Delete from server using CAN ID
-        const deleteResponse = await fetch(`/api/filters?can_id=${canId}`, {
+        const deleteResponse = await fetch(`/api/filters?can_id=${canIdHex}`, {
             method: 'DELETE'
         });
 
@@ -74,47 +82,69 @@ export async function removeFilter(canId) {
 // Update filter display
 export async function updateFilterDisplay() {
     const container = document.getElementById('filtersContainer');
+    if (!container) {
+        console.error('Filters container not found');
+        return;
+    }
+
+    console.log('Updating filter display...');
 
     try {
         const response = await fetch('/api/filters');
+        console.log('Filters response status:', response.status);
+
         if (response.ok) {
             const serverFilters = await response.json();
+            console.log('Server filters loaded:', serverFilters);
 
             // Update local filters set
             filters.clear();
+            const enabledFilters = [];
+
             serverFilters.forEach(filter => {
                 if (filter.enabled) {
-                    const canIdHex = '0x' + filter.can_id.toString(16).toLowerCase().padStart(3, '0');
-                    filters.add(canIdHex);
+                    filters.add(filter.can_id);
+                    enabledFilters.push(filter);
                 }
             });
+
+            console.log('Enabled filters:', enabledFilters);
+            console.log('Filters set size:', filters.size);
 
             // Clear and rebuild container
             container.innerHTML = '';
 
-            filters.forEach(canId => {
+            enabledFilters.forEach(filter => {
+                const canIdHex = '0x' + filter.can_id.toString(16).toLowerCase();
                 const filterElement = document.createElement('div');
                 filterElement.className = 'filter-item';
                 filterElement.innerHTML = `
                     <div class="filter-header">
-                        <span class="filter-can-id">${canId}</span>
-                        <button class="remove-btn" data-canid="${canId}">×</button>
+                        <span class="filter-can-id">${canIdHex}</span>
+                        <button class="remove-btn" data-canid="${canIdHex}">×</button>
                     </div>
                     <div class="data-points">
-                        Frames: <span id="count-${canId}">0</span>
+                        Frames: <span id="count-${canIdHex}">0</span>
                     </div>
                 `;
 
                 // Add event listener to remove button
                 const removeBtn = filterElement.querySelector('.remove-btn');
                 removeBtn.addEventListener('click', async () => {
-                    await removeFilter(canId);
+                    await removeFilter(canIdHex);
                 });
 
                 container.appendChild(filterElement);
             });
 
-            document.getElementById('filterCount').textContent = filters.size;
+            const filterCount = document.getElementById('filterCount');
+            if (filterCount) {
+                filterCount.textContent = enabledFilters.length;
+                console.log('Filter count updated:', enabledFilters.length);
+            }
+
+        } else {
+            console.error('Failed to fetch filters, status:', response.status);
         }
     } catch (error) {
         console.error('Failed to load filters from server:', error);

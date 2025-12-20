@@ -66,6 +66,9 @@ h1 {
     margin-bottom: 30px;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
     border: 1px solid rgba(0, 0, 0, 0.05);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 .section-title {
@@ -77,10 +80,12 @@ h1 {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
 }
 
 .form-group {
     margin-bottom: 20px;
+    flex-grow: 0;
 }
 
 label {
@@ -115,6 +120,7 @@ button {
     cursor: pointer;
     transition: transform 0.3s, box-shadow 0.3s;
     width: 100%;
+    margin-top: auto;
 }
 
 button:hover {
@@ -136,7 +142,24 @@ button:active {
 .grid-2 {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 20px;
+    gap: 30px;
+    margin-bottom: 30px;
+    align-items: stretch;
+}
+
+@media (max-width: 1024px) {
+    .grid-2 {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .container {
+        border-radius: 15px;
+    }
+
+    .content {
+        padding: 20px;
+    }
 }
 
 @media (max-width: 768px) {
@@ -146,6 +169,7 @@ button:active {
 
     .container {
         border-radius: 10px;
+        margin: 10px;
     }
 
     .content {
@@ -154,6 +178,22 @@ button:active {
 
     .byte-inputs {
         grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    h1 {
+        font-size: 2em;
+    }
+
+    .section {
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    .section-title {
+        font-size: 1.3em;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
     }
 }
 
@@ -174,6 +214,7 @@ button:active {
 
 .connection-controls button {
     flex: 1;
+    margin-top: 0;
 }
 
 .byte-display {
@@ -208,6 +249,7 @@ button:active {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 15px;
+    flex-wrap: wrap;
 }
 
 .chart-stats {
@@ -220,16 +262,26 @@ button:active {
 /* Фильтры */
 .filters-container {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 15px;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
     margin-bottom: 20px;
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 10px;
+    background: #fafafa;
+    border-radius: 10px;
+    border: 1px solid #eee;
+    flex-grow: 1;
 }
 
 .filter-item {
     background: #f8f9fa;
-    padding: 15px;
+    padding: 12px;
     border-radius: 10px;
     border: 2px solid #e0e0e0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
 
 .filter-header {
@@ -242,6 +294,7 @@ button:active {
 .filter-can-id {
     font-weight: bold;
     color: #667eea;
+    font-size: 0.95em;
 }
 
 /* Блоки CAN ID */
@@ -265,6 +318,8 @@ button:active {
     margin-bottom: 15px;
     padding-bottom: 10px;
     border-bottom: 1px solid #e0e0e0;
+    flex-wrap: wrap;
+    gap: 10px;
 }
 
 .byte-inputs {
@@ -300,6 +355,11 @@ button:active {
     display: flex;
     gap: 10px;
     margin-top: 10px;
+    margin-bottom: 15px;
+}
+
+.controls-row input {
+    flex-grow: 1;
 }
 
 .color-indicator {
@@ -326,6 +386,9 @@ button:active {
     padding: 40px;
     color: #999;
     font-style: italic;
+    background: #fafafa;
+    border-radius: 10px;
+    border: 2px dashed #ddd;
 }
 
 .toggle-btn {
@@ -333,4 +396,57 @@ button:active {
     padding: 8px 16px;
     width: auto;
     font-size: 0.9em;
+}
+
+/* Стили для контейнера с кнопками внутри фильтра */
+.filter-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
+}
+
+/* Адаптивные стили для маленьких экранов */
+@media (max-width: 480px) {
+    .filters-container {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        max-height: 150px;
+    }
+
+    .byte-inputs {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .can-id-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .can-id-header .controls-row {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    button {
+        padding: 12px 20px;
+        font-size: 14px;
+    }
+}
+
+/* Стили для скроллбара в контейнере фильтров */
+.filters-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.filters-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.filters-container::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.filters-container::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
 }

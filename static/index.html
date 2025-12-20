@@ -17,49 +17,52 @@
     </header>
 
     <div class="content">
-        <!-- Block 1: CAN Frame Sender -->
-        <div class="section">
-            <div class="section-title">
-                <span>CAN Frame Sender</span>
-                <span class="data-points">Frames sent: <span id="sentCount">0</span></span>
+        <!-- Первый ряд: Sender и Filters в одном ряду -->
+        <div class="grid-2">
+            <!-- Block 1: CAN Frame Sender -->
+            <div class="section">
+                <div class="section-title">
+                    <span>CAN Frame Sender</span>
+                    <span class="data-points">Frames sent: <span id="sentCount">0</span></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="canId">CAN ID (hex):</label>
+                    <input type="text" id="canId" placeholder="0x200" value="0x200">
+                </div>
+
+                <div class="form-group">
+                    <label for="canData">Data (hex bytes, space separated):</label>
+                    <input type="text" id="canData" placeholder="01 02 03 04 05 06 07 08">
+                </div>
+
+                <button onclick="sendCANFrame()">Send CAN Frame</button>
+
+                <div class="connection-controls">
+                    <button id="connectBtn">Connect</button>
+                    <button id="disconnectBtn" disabled>Disconnect</button>
+                </div>
             </div>
 
-            <div class="form-group">
-                <label for="canId">CAN ID (hex):</label>
-                <input type="text" id="canId" placeholder="0x200" value="0x200">
-            </div>
+            <!-- Block 2: Фильтры CAN ID -->
+            <div class="section">
+                <div class="section-title">
+                    <span>CAN ID Filters</span>
+                    <span class="data-points">Active filters: <span id="filterCount">0</span></span>
+                </div>
 
-            <div class="form-group">
-                <label for="canData">Data (hex bytes, space separated):</label>
-                <input type="text" id="canData" placeholder="01 02 03 04 05 06 07 08">
-            </div>
+                <div class="controls-row">
+                    <input type="text" id="newFilterId" placeholder="0x200 (hex)">
+                    <button class="add-btn">Add Filter</button>
+                </div>
 
-            <button onclick="sendCANFrame()">Send CAN Frame</button>
-
-            <div class="connection-controls">
-                <button id="connectBtn">Connect</button>
-                <button id="disconnectBtn" disabled>Disconnect</button>
+                <div id="filtersContainer" class="filters-container">
+                    <!-- Filters will be added here dynamically -->
+                </div>
             </div>
         </div>
 
-        <!-- Block 2: Фильтры CAN ID -->
-        <div class="section">
-            <div class="section-title">
-                <span>CAN ID Filters</span>
-                <span class="data-points">Active filters: <span id="filterCount">0</span></span>
-            </div>
-
-            <div class="controls-row">
-                <input type="text" id="newFilterId" placeholder="0x200 (hex)">
-                <button class="add-btn">Add Filter</button>
-            </div>
-
-            <div id="filtersContainer" class="filters-container">
-                <!-- Filters will be added here dynamically -->
-            </div>
-        </div>
-
-        <!-- Block 3: Блоки CAN ID с графиками -->
+        <!-- Второй ряд: Блоки CAN ID с графиками на всю ширину -->
         <div class="section">
             <div class="section-title">
                 <span>CAN ID Analysis Blocks</span>

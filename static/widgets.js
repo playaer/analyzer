@@ -5,12 +5,17 @@ export let canIdBlocks = new Map();
 
 // Initialize widgets module
 export function initWidgets() {
-    // Additional initialization if needed
+    console.log('Widgets module initialized');
 }
 
 // Render CAN ID blocks
 export function renderCanIdBlocks() {
     const container = document.getElementById('canIdBlocks');
+    if (!container) {
+        console.error('CAN ID blocks container not found');
+        return;
+    }
+
     container.innerHTML = '';
 
     canIdBlocks.forEach((block, canId) => {
@@ -76,7 +81,10 @@ export function renderCanIdBlocks() {
         removeBtn.addEventListener('click', () => removeCanIdBlock(canId));
     });
 
-    document.getElementById('blockCount').textContent = canIdBlocks.size;
+    const blockCountElem = document.getElementById('blockCount');
+    if (blockCountElem) {
+        blockCountElem.textContent = canIdBlocks.size;
+    }
 
     // Initialize charts for each block
     setTimeout(() => {
@@ -87,7 +95,7 @@ export function renderCanIdBlocks() {
 }
 
 // Process CAN frame for widgets
-export function processCANFrameForWidgets(frame, filters) {
+export function processCANFrameForWidgets(frame) {
     const canId = frame.id.toLowerCase();
     const data = hexToBytes(frame.data);
     const timestamp = new Date().toLocaleTimeString();
@@ -354,6 +362,16 @@ export function updateByteConfig(canId, byteIndex, config) {
         block.byteConfigs[byteIndex] = config.trim();
         updateChartDataStructure(block);
         renderCanIdBlocks();
+
+        // Save to localStorage
+        const blocksObj = {};
+        canIdBlocks.forEach((value, key) => {
+            const saveBlock = { ...value };
+            delete saveBlock.chartData;
+            delete saveBlock.frameCount;
+            blocksObj[key] = saveBlock;
+        });
+        localStorage.setItem('canIdBlocks', JSON.stringify(blocksObj));
     }
 }
 
@@ -395,6 +413,17 @@ function toggleBlock(canId) {
     const block = canIdBlocks.get(canId);
     if (block) {
         block.enabled = !block.enabled;
+
+        // Save to localStorage
+        const blocksObj = {};
+        canIdBlocks.forEach((value, key) => {
+            const saveBlock = { ...value };
+            delete saveBlock.chartData;
+            delete saveBlock.frameCount;
+            blocksObj[key] = saveBlock;
+        });
+        localStorage.setItem('canIdBlocks', JSON.stringify(blocksObj));
+
         renderCanIdBlocks();
     }
 }
@@ -410,5 +439,16 @@ function removeCanIdBlock(canId) {
     }
 
     canIdBlocks.delete(canId);
+
+    // Update localStorage
+    const blocksObj = {};
+    canIdBlocks.forEach((value, key) => {
+        const saveBlock = { ...value };
+        delete saveBlock.chartData;
+        delete saveBlock.frameCount;
+        blocksObj[key] = saveBlock;
+    });
+    localStorage.setItem('canIdBlocks', JSON.stringify(blocksObj));
+
     renderCanIdBlocks();
 }

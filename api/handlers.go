@@ -202,6 +202,8 @@ func (h *APIHandler) deleteFilter(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *APIHandler) getFilters(w http.ResponseWriter, r *http.Request) {
+	h.log.Info().Msg("Fetching filters from database")
+
 	rows, err := h.db.Query("SELECT id, can_id, mask, enabled FROM filters")
 	if err != nil {
 		h.log.Error().Err(err).Msg("Failed to query filters")
@@ -220,6 +222,7 @@ func (h *APIHandler) getFilters(w http.ResponseWriter, r *http.Request) {
 		}
 		f.Enabled = enabledInt == 1
 		filters = append(filters, f)
+		h.log.Info().Uint32("can_id", f.CANID).Bool("enabled", f.Enabled).Msg("Found filter")
 	}
 
 	if err := rows.Err(); err != nil {
@@ -227,6 +230,8 @@ func (h *APIHandler) getFilters(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
+
+	h.log.Info().Int("count", len(filters)).Msg("Returning filters")
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(filters); err != nil {
