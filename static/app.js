@@ -1,42 +1,42 @@
 // Основной файл приложения, который инициализирует все модули
 import { initWebSocket, connectWebSocket, disconnectWebSocket, sendWebSocketMessage } from './websocket.js';
 import { initFilters, addFilter, removeFilter, updateFilterDisplay, filters } from './filters.js';
-import { initWidgets, renderCanIdBlocks, processCANFrameForWidgets, canIdBlocks } from './widgets.js';
 import { initSender, sendCANFrame } from './sender.js';
-import { loadFromLocalStorage } from './utils.js';
+import { hexToBytes } from './utils.js';
+
+// Widget management
+import { CanChartWidget } from './widgets/canChart.js';
 
 // DOM Elements
-let connectBtn, disconnectBtn, newFilterInput, newBlockInput;
+let newFilterInput, newBlockInput;
+let addWidgetBtn, widgetModal, closeModal, cancelWidgetBtn, saveWidgetBtn;
+let widgetTypeSelect, widgetCanIdInput, widgetSettingsContainer;
+
+// Widget management
+let widgets = new Map(); // Map<widgetId, widgetInstance>
 
 // Initialize the application
 export async function init() {
     console.log('Initializing application...');
 
     // Cache DOM elements
-    connectBtn = document.getElementById('connectBtn');
-    disconnectBtn = document.getElementById('disconnectBtn');
     newFilterInput = document.getElementById('newFilterId');
-    newBlockInput = document.getElementById('newBlockId');
+    addWidgetBtn = document.getElementById('addWidgetBtn');
+    widgetModal = document.getElementById('widgetModal');
+    closeModal = document.querySelector('.close');
+    cancelWidgetBtn = document.getElementById('cancelWidgetBtn');
+    saveWidgetBtn = document.getElementById('saveWidgetBtn');
+    widgetTypeSelect = document.getElementById('widgetType');
+    widgetCanIdInput = document.getElementById('widgetCanId');
+    widgetSettingsContainer = document.getElementById('widgetSettings');
 
     // Initialize modules
     initWebSocket(handleWebSocketMessage, updateConnectionStatus);
     initFilters();
-    initWidgets();
     initSender();
 
-    // Add event listeners
-    connectBtn.addEventListener('click', () => {
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/ws`;
-        console.log('Connecting to WebSocket:', wsUrl);
-        connectWebSocket(wsUrl);
-    });
-
-    disconnectBtn.addEventListener('click', disconnectWebSocket);
-
+    // Add event listeners for filters
     const addFilterBtn = document.querySelector('#filtersContainer').parentElement.querySelector('.add-btn');
-    const addBlockBtn = document.querySelector('#canIdBlocks').parentElement.querySelector('.add-btn');
-
     addFilterBtn.addEventListener('click', () => {
         const value = newFilterInput.value.trim().toLowerCase();
         if (value) {
@@ -44,33 +44,20 @@ export async function init() {
         }
     });
 
-    addBlockBtn.addEventListener('click', () => {
-        const value = newBlockInput.value.trim().toLowerCase();
-        if (value) {
-            addCanIdBlock(value);
-        }
-    });
-
-    // Load blocks from localStorage
-    const savedBlocks = loadFromLocalStorage();
-    if (savedBlocks && Object.keys(savedBlocks).length > 0) {
-        Object.entries(savedBlocks).forEach(([canId, block]) => {
-            canIdBlocks.set(canId, {
-                ...block,
-                chartData: {},
-                frameCount: 0
-            });
-        });
-    }
+    // Add event listeners for widgets modal
+    addWidgetBtn.addEventListener('click', openWidgetModal);
+    closeModal.addEventListener('click', closeWidgetModal);
+    cancelWidgetBtn.addEventListener('click', closeWidgetModal);
+    saveWidgetBtn.addEventListener('click', saveWidget);
+    widgetTypeSelect.addEventListener('change', updateWidgetSettings);
 
     // Load filters from server
-    console.log('Loading filters from server...');
     await updateFilterDisplay();
 
-    // Render CAN ID blocks
-    renderCanIdBlocks();
+    // Load widgets from localStorage
+    loadWidgetsFromLocalStorage();
 
-    // Auto-connect after 1 second
+    // Auto-connect WebSocket after 1 second
     setTimeout(() => {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${protocol}//${window.location.host}/ws`;
@@ -107,7 +94,15 @@ function processCANFrame(frame) {
     }
 
     // Process frame for widgets
-    processCANFrameForWidgets(frame);
+    const data = hexToBytes(frame.data);
+    const timestamp = new Date().toLocaleTimeString();
+
+    // Process all widgets
+    widgets.forEach(widget => {
+        if (widget.canId === canId) {
+            widget.processFrame(data, timestamp);
+        }
+    });
 }
 
 // Update connection status
@@ -117,60 +112,127 @@ function updateConnectionStatus(connected) {
     if (connected) {
         statusElem.textContent = 'Connected';
         statusElem.className = 'status connected';
-        connectBtn.disabled = true;
-        disconnectBtn.disabled = false;
     } else {
         statusElem.textContent = 'Disconnected';
         statusElem.className = 'status disconnected';
-        connectBtn.disabled = false;
-        disconnectBtn.disabled = true;
     }
 }
 
-// Function to add CAN ID block
-function addCanIdBlock(canId) {
-    if (!canId.match(/^0x[0-9a-f]+$/i)) {
-        alert('Invalid CAN ID format. Use hex like 0x200');
-        return;
+// Modal functions
+function openWidgetModal() {
+    widgetModal.style.display = 'block';
+    updateWidgetSettings(); // Initialize settings for current type
+}
+
+function closeWidgetModal() {
+    widgetModal.style.display = 'none';
+}
+
+function updateWidgetSettings() {
+    const type = widgetTypeSelect.value;
+    if (type === 'canChart') {
+        // Settings are already in HTML, no need to change
+    }
+}
+
+function saveWidget() {
+    const type = widgetTypeSelect.value;
+
+    if (type === 'canChart') {
+        const canId = document.getElementById('widgetCanId').value.trim().toLowerCase();
+
+        if (!canId.match(/^0x[0-9a-f]+$/i)) {
+            alert('Invalid CAN ID format. Use hex like 0x200');
+            return;
+        }
+
+        // Collect byte configurations
+        const byteConfigs = [];
+        for (let i = 0; i < 8; i++) {
+            const input = document.getElementById(`byteConfig${i}`);
+            byteConfigs.push(input.value.trim());
+        }
+
+        // Create widget
+        const widgetId = `widget-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const widget = new CanChartWidget({
+            id: widgetId,
+            canId: canId,
+            byteConfigs: byteConfigs,
+            enabled: true
+        });
+
+        // Add to DOM
+        const container = document.getElementById('widgetsContainer');
+        container.appendChild(widget.render());
+
+        // Store reference
+        widgets.set(widgetId, widget);
+        widget.onRemove = (id) => {
+            widgets.delete(id);
+            document.getElementById('widgetCount').textContent = widgets.size;
+            saveWidgetsToLocalStorage();
+        };
+
+        // Update count
+        document.getElementById('widgetCount').textContent = widgets.size;
+
+        // Clear inputs
+        document.getElementById('widgetCanId').value = '';
+        for (let i = 0; i < 8; i++) {
+            document.getElementById(`byteConfig${i}`).value = '';
+        }
+
+        // Save to localStorage
+        saveWidgetsToLocalStorage();
     }
 
-    if (canIdBlocks.has(canId)) {
-        alert('Block already exists');
-        return;
-    }
+    closeWidgetModal();
+}
 
-    // Initialize block configuration
-    const blockConfig = {
-        canId: canId,
-        byteConfigs: Array(8).fill(''),
-        enabled: true,
-        chartData: {},
-        frameCount: 0
-    };
-
-    canIdBlocks.set(canId, blockConfig);
-    newBlockInput.value = '';
-    renderCanIdBlocks();
-
-    // Save to localStorage
-    const blocksObj = {};
-    canIdBlocks.forEach((value, key) => {
-        const saveBlock = { ...value };
-        delete saveBlock.chartData;
-        delete saveBlock.frameCount;
-        blocksObj[key] = saveBlock;
+function saveWidgetsToLocalStorage() {
+    const widgetsData = [];
+    widgets.forEach(widget => {
+        widgetsData.push({
+            type: 'canChart',
+            id: widget.id,
+            canId: widget.canId,
+            byteConfigs: widget.byteConfigs,
+            enabled: widget.enabled
+        });
     });
-    localStorage.setItem('canIdBlocks', JSON.stringify(blocksObj));
+    localStorage.setItem('widgets', JSON.stringify(widgetsData));
+}
+
+function loadWidgetsFromLocalStorage() {
+    const saved = localStorage.getItem('widgets');
+    if (saved) {
+        try {
+            const widgetsData = JSON.parse(saved);
+            widgetsData.forEach(data => {
+                if (data.type === 'canChart') {
+                    const widget = new CanChartWidget(data);
+                    const container = document.getElementById('widgetsContainer');
+                    if (container) {
+                        container.appendChild(widget.render());
+                    }
+                    widgets.set(data.id, widget);
+                    widget.onRemove = (id) => {
+                        widgets.delete(id);
+                        document.getElementById('widgetCount').textContent = widgets.size;
+                        saveWidgetsToLocalStorage();
+                    };
+                }
+            });
+            document.getElementById('widgetCount').textContent = widgets.size;
+        } catch (e) {
+            console.error('Failed to load widgets:', e);
+        }
+    }
 }
 
 // Expose functions to window for inline event handlers
 window.sendCANFrame = sendCANFrame;
-window.connectWebSocket = () => {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
-    connectWebSocket(wsUrl);
-};
-window.disconnectWebSocket = disconnectWebSocket;
 
 // Initialize on load
 document.addEventListener('DOMContentLoaded', init);
@@ -178,10 +240,10 @@ document.addEventListener('DOMContentLoaded', init);
 // Cleanup on page unload
 window.addEventListener('beforeunload', function() {
     // Clean up all charts
-    canIdBlocks.forEach(block => {
-        for (const key in block.chartData) {
-            if (block.chartData[key].chart) {
-                block.chartData[key].chart.destroy();
+    widgets.forEach(widget => {
+        for (const key in widget.chartData) {
+            if (widget.chartData[key].chart) {
+                widget.chartData[key].chart.destroy();
             }
         }
     });

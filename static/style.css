@@ -176,7 +176,7 @@ button:active {
         padding: 15px;
     }
 
-    .byte-inputs {
+    .byte-inputs-grid {
         grid-template-columns: repeat(2, 1fr) !important;
     }
 
@@ -204,17 +204,6 @@ button:active {
     padding: 10px;
     border-radius: 8px;
     margin-top: 10px;
-}
-
-.connection-controls {
-    display: flex;
-    gap: 10px;
-    margin-top: 20px;
-}
-
-.connection-controls button {
-    flex: 1;
-    margin-top: 0;
 }
 
 .byte-display {
@@ -297,21 +286,21 @@ button:active {
     font-size: 0.95em;
 }
 
-/* Блоки CAN ID */
-.can-id-blocks {
+/* Widgets Container */
+.widgets-container {
     display: flex;
     flex-direction: column;
     gap: 20px;
 }
 
-.can-id-block {
+.widget {
     background: #f8f9fa;
     border-radius: 10px;
     padding: 20px;
     border: 2px solid #e0e0e0;
 }
 
-.can-id-header {
+.widget-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -322,21 +311,79 @@ button:active {
     gap: 10px;
 }
 
-.byte-inputs {
+.widget-charts {
     display: grid;
-    grid-template-columns: repeat(8, 1fr);
-    gap: 10px;
+    grid-template-columns: 1fr;
+    gap: 20px;
+}
+
+/* Модальное окно */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+    background-color: white;
+    margin: 5% auto;
+    padding: 20px;
+    border-radius: 15px;
+    width: 80%;
+    max-width: 600px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #667eea;
+    padding-bottom: 10px;
     margin-bottom: 20px;
 }
 
-.byte-input {
-    display: flex;
-    flex-direction: column;
+.modal-header h3 {
+    margin: 0;
+    color: #333;
 }
 
-.byte-input label {
-    font-size: 0.8em;
-    margin-bottom: 5px;
+.close {
+    font-size: 28px;
+    font-weight: bold;
+    color: #aaa;
+    cursor: pointer;
+}
+
+.close:hover {
+    color: #000;
+}
+
+.modal-body {
+    margin-bottom: 20px;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.byte-inputs-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.byte-inputs-grid input {
+    font-size: 0.9em;
+    padding: 8px;
 }
 
 .remove-btn {
@@ -369,12 +416,6 @@ button:active {
     display: inline-block;
     margin-right: 5px;
     border: 1px solid #ddd;
-}
-
-.chart-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 20px;
 }
 
 .mini-chart-container {
@@ -412,16 +453,16 @@ button:active {
         max-height: 150px;
     }
 
-    .byte-inputs {
-        grid-template-columns: repeat(4, 1fr);
+    .byte-inputs-grid {
+        grid-template-columns: repeat(2, 1fr);
     }
 
-    .can-id-header {
+    .widget-header {
         flex-direction: column;
         align-items: flex-start;
     }
 
-    .can-id-header .controls-row {
+    .widget-header .controls-row {
         width: 100%;
         justify-content: space-between;
     }

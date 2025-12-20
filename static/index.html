@@ -37,11 +37,6 @@
                 </div>
 
                 <button onclick="sendCANFrame()">Send CAN Frame</button>
-
-                <div class="connection-controls">
-                    <button id="connectBtn">Connect</button>
-                    <button id="disconnectBtn" disabled>Disconnect</button>
-                </div>
             </div>
 
             <!-- Block 2: Фильтры CAN ID -->
@@ -62,21 +57,59 @@
             </div>
         </div>
 
-        <!-- Второй ряд: Блоки CAN ID с графиками на всю ширину -->
+        <!-- Второй ряд: Блоки виджетов на всю ширину -->
         <div class="section">
             <div class="section-title">
-                <span>CAN ID Analysis Blocks</span>
-                <span class="data-points">Blocks: <span id="blockCount">0</span></span>
+                <span>Widgets</span>
+                <span class="data-points">Widgets: <span id="widgetCount">0</span></span>
             </div>
 
             <div class="controls-row">
-                <input type="text" id="newBlockId" placeholder="0x200 (hex)">
-                <button class="add-btn">Add CAN ID Block</button>
+                <button id="addWidgetBtn" class="add-btn">Add Widget</button>
             </div>
 
-            <div id="canIdBlocks" class="can-id-blocks">
-                <!-- CAN ID blocks will be added here dynamically -->
+            <div id="widgetsContainer" class="widgets-container">
+                <!-- Widgets will be added here dynamically -->
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно добавления виджета -->
+<div id="widgetModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Add Widget</h3>
+            <span class="close">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="widgetType">Widget Type:</label>
+                <select id="widgetType">
+                    <option value="canChart">CAN ID Chart</option>
+                </select>
+            </div>
+            <div id="widgetSettings">
+                <!-- Настройки для CAN ID Chart -->
+                <div class="form-group">
+                    <label for="widgetCanId">CAN ID (hex):</label>
+                    <input type="text" id="widgetCanId" placeholder="0x200">
+                </div>
+                <div class="byte-inputs-grid">
+                    <input type="text" id="byteConfig0" placeholder="Byte 0 (0, 0-1, 0-1(U), 0-3(F,2))">
+                    <input type="text" id="byteConfig1" placeholder="Byte 1 (0, 0-1, 0-1(U), 0-3(F,2))">
+                    <input type="text" id="byteConfig2" placeholder="Byte 2 (0, 0-1, 0-1(U), 0-3(F,2))">
+                    <input type="text" id="byteConfig3" placeholder="Byte 3 (0, 0-1, 0-1(U), 0-3(F,2))">
+                    <input type="text" id="byteConfig4" placeholder="Byte 4 (0, 0-1, 0-1(U), 0-3(F,2))">
+                    <input type="text" id="byteConfig5" placeholder="Byte 5 (0, 0-1, 0-1(U), 0-3(F,2))">
+                    <input type="text" id="byteConfig6" placeholder="Byte 6 (0, 0-1, 0-1(U), 0-3(F,2))">
+                    <input type="text" id="byteConfig7" placeholder="Byte 7 (0, 0-1, 0-1(U), 0-3(F,2))">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button id="saveWidgetBtn" class="add-btn">Add Widget</button>
+            <button id="cancelWidgetBtn" class="remove-btn">Cancel</button>
         </div>
     </div>
 </div>
