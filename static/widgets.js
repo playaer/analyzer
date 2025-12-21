@@ -1,454 +1,258 @@
-// Widgets module for CAN ID blocks and charts
-import { chartColors, MAX_POINTS, hexToBytes } from './utils.js';
+// Main widgets coordinator
+import { canChartWidget } from './canChart.js';
+import { canChart2Widget } from './canChart2.js';
 
-export let canIdBlocks = new Map();
+export let widgets = new Map(); // Map<widgetId, WidgetConfig>
 
-// Initialize widgets module
 export function initWidgets() {
     console.log('Widgets module initialized');
+    setupModalEvents();
+    loadWidgetsFromStorage();
+    renderWidgets();
 }
 
-// Render CAN ID blocks
-export function renderCanIdBlocks() {
-    const container = document.getElementById('canIdBlocks');
-    if (!container) {
-        console.error('CAN ID blocks container not found');
+export function processCANFrameForWidgets(frame) {
+    const canId = frame.id.toLowerCase();
+
+    // Process frame for each widget
+    widgets.forEach((widget, widgetId) => {
+        if (widget.canId === canId && widget.enabled) {
+            widget.frameCount++;
+
+            // Update widget frame count display
+            const countElem = document.getElementById(`frame-count-${widgetId}`);
+            if (countElem) {
+                countElem.textContent = widget.frameCount;
+            }
+
+            // Process based on widget type
+            switch (widget.type) {
+                case 'canChart':
+                    canChartWidget.processFrame(widgetId, frame, widget);
+                    break;
+                case 'canChart2':
+                    canChart2Widget.processFrame(widgetId, frame, widget);
+                    break;
+            }
+        }
+    });
+}
+
+// Modal handling
+function setupModalEvents() {
+    const modal = document.getElementById('widgetModal');
+    const addBtn = document.getElementById('addWidgetBtn');
+    const closeBtn = document.querySelector('.modal-close');
+    const cancelBtn = document.getElementById('modalCancelBtn');
+    const saveBtn = document.getElementById('modalSaveBtn');
+    const widgetTypeSelect = document.getElementById('modalWidgetType');
+
+    addBtn.addEventListener('click', () => {
+        openModal();
+    });
+
+    closeBtn.addEventListener('click', closeModal);
+    cancelBtn.addEventListener('click', closeModal);
+
+    widgetTypeSelect.addEventListener('change', (e) => {
+        const type = e.target.value;
+        document.getElementById('singleChartConfig').style.display =
+            type === 'canChart' ? 'block' : 'none';
+        document.getElementById('dualChartConfig').style.display =
+            type === 'canChart2' ? 'block' : 'none';
+    });
+
+    saveBtn.addEventListener('click', saveWidget);
+
+    // Close modal when clicking outside
+    window.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+}
+
+function openModal(widgetId = null) {
+    const modal = document.getElementById('widgetModal');
+    const modalWidgetId = document.getElementById('modalWidgetId');
+    const modalCanId = document.getElementById('modalCanId');
+    const modalWidgetType = document.getElementById('modalWidgetType');
+
+    if (widgetId) {
+        // Edit mode
+        const widget = widgets.get(widgetId);
+        if (widget) {
+            modalWidgetId.value = widgetId;
+            modalWidgetId.readOnly = true;
+            modalCanId.value = widget.canId;
+            modalWidgetType.value = widget.type;
+
+            // Load specific config based on type
+            if (widget.type === 'canChart') {
+                // Load single chart config
+            } else if (widget.type === 'canChart2') {
+                // Load dual chart config
+            }
+        }
+    } else {
+        // Add mode
+        modalWidgetId.value = `widget-${Date.now()}`;
+        modalWidgetId.readOnly = false;
+        modalCanId.value = '';
+        modalWidgetType.value = 'canChart';
+    }
+
+    modal.style.display = 'block';
+}
+
+function closeModal() {
+    document.getElementById('widgetModal').style.display = 'none';
+    clearModal();
+}
+
+function clearModal() {
+    document.getElementById('modalWidgetId').value = '';
+    document.getElementById('modalCanId').value = '';
+    document.getElementById('modalWidgetType').value = 'canChart';
+
+    // Reset config sections
+    document.getElementById('singleChartConfig').style.display = 'block';
+    document.getElementById('dualChartConfig').style.display = 'none';
+}
+
+function saveWidget() {
+    const widgetId = document.getElementById('modalWidgetId').value;
+    const canId = document.getElementById('modalCanId').value;
+    const type = document.getElementById('modalWidgetType').value;
+
+    if (!widgetId.match(/^[a-zA-Z0-9-_]+$/)) {
+        alert('Widget ID может содержать только буквы, цифры, дефисы и подчеркивания');
         return;
     }
 
+    if (!canId.match(/^0x[0-9a-f]+$/i)) {
+        alert('Неверный формат CAN ID. Используйте hex, например 0x200');
+        return;
+    }
+
+    const widgetConfig = {
+        widgetId: widgetId,
+        canId: canId.toLowerCase(),
+        type: type,
+        enabled: true,
+        frameCount: 0,
+        createdAt: new Date().toISOString()
+    };
+
+    // Save config based on widget type
+    if (type === 'canChart') {
+        widgetConfig.config = canChartWidget.getConfigFromModal();
+    } else if (type === 'canChart2') {
+        widgetConfig.config = canChart2Widget.getConfigFromModal();
+    }
+
+    widgets.set(widgetId, widgetConfig);
+    closeModal();
+    renderWidgets();
+    saveWidgetsToStorage();
+}
+
+export function renderWidgets() {
+    const container = document.getElementById('widgetsContainer');
     container.innerHTML = '';
 
-    canIdBlocks.forEach((block, canId) => {
-        const blockElement = document.createElement('div');
-        blockElement.className = 'can-id-block';
-        blockElement.id = `block-${canId}`;
+    widgets.forEach((widget, widgetId) => {
+        let widgetHTML = '';
 
-        let byteInputs = '';
-        for (let i = 0; i < 8; i++) {
-            byteInputs += `
-                <div class="byte-input">
-                    <label>Byte ${i}</label>
-                    <input type="text" 
-                           value="${block.byteConfigs[i] || ''}" 
-                           placeholder="0, 0-1, 0-1(U), 0-3(F,2)"
-                           data-canid="${canId}"
-                           data-byteindex="${i}">
-                </div>
-            `;
+        switch (widget.type) {
+            case 'canChart':
+                widgetHTML = canChartWidget.render(widgetId, widget);
+                break;
+            case 'canChart2':
+                widgetHTML = canChart2Widget.render(widgetId, widget);
+                break;
         }
 
-        blockElement.innerHTML = `
-            <div class="can-id-header">
-                <div>
-                    <span style="font-weight: bold; font-size: 1.2em;">${canId}</span>
-                    <span class="data-points" style="margin-left: 10px;">
-                        Frames: <span id="frame-count-${canId}">${block.frameCount}</span>
-                    </span>
-                </div>
-                <div class="controls-row">
-                    <button class="toggle-btn" data-canid="${canId}">
-                        ${block.enabled ? 'Disable' : 'Enable'}
-                    </button>
-                    <button class="remove-btn" data-canid="${canId}">Remove</button>
-                </div>
-            </div>
-            
-            <div class="byte-inputs">
-                ${byteInputs}
-            </div>
-            
-            <div class="chart-grid">
-                ${renderChartsForBlock(block)}
-            </div>
-        `;
+        const widgetElement = document.createElement('div');
+        widgetElement.className = 'widget';
+        widgetElement.id = `widget-${widgetId}`;
+        widgetElement.innerHTML = widgetHTML;
 
-        container.appendChild(blockElement);
+        container.appendChild(widgetElement);
 
-        // Add event listeners
-        const inputs = blockElement.querySelectorAll('.byte-input input');
-        inputs.forEach(input => {
-            input.addEventListener('change', function() {
-                const canId = this.getAttribute('data-canid');
-                const byteIndex = parseInt(this.getAttribute('data-byteindex'));
-                updateByteConfig(canId, byteIndex, this.value);
+        // Add event listeners for widget actions
+        const editBtn = widgetElement.querySelector('.widget-btn.edit');
+        const removeBtn = widgetElement.querySelector('.widget-btn.remove');
+
+        if (editBtn) {
+            editBtn.addEventListener('click', () => openModal(widgetId));
+        }
+
+        if (removeBtn) {
+            removeBtn.addEventListener('click', () => removeWidget(widgetId));
+        }
+
+        // Initialize chart if needed
+        setTimeout(() => {
+            switch (widget.type) {
+                case 'canChart':
+                    canChartWidget.initChart(widgetId, widget);
+                    break;
+                case 'canChart2':
+                    canChart2Widget.initChart(widgetId, widget);
+                    break;
+            }
+        }, 100);
+    });
+
+    document.getElementById('widgetCount').textContent = widgets.size;
+}
+
+function removeWidget(widgetId) {
+    if (confirm('Удалить этот виджет?')) {
+        const widget = widgets.get(widgetId);
+        if (widget) {
+            // Clean up chart resources
+            switch (widget.type) {
+                case 'canChart':
+                    canChartWidget.destroy(widgetId);
+                    break;
+                case 'canChart2':
+                    canChart2Widget.destroy(widgetId);
+                    break;
+            }
+        }
+
+        widgets.delete(widgetId);
+        renderWidgets();
+        saveWidgetsToStorage();
+    }
+}
+
+// Storage functions
+function loadWidgetsFromStorage() {
+    try {
+        const saved = localStorage.getItem('canWidgets');
+        if (saved) {
+            const savedWidgets = JSON.parse(saved);
+            Object.entries(savedWidgets).forEach(([id, widget]) => {
+                widgets.set(id, {
+                    ...widget,
+                    frameCount: 0 // Reset frame count on load
+                });
             });
-        });
+        }
+    } catch (e) {
+        console.error('Failed to load widgets:', e);
+    }
+}
 
-        const toggleBtn = blockElement.querySelector('.toggle-btn');
-        toggleBtn.addEventListener('click', () => toggleBlock(canId));
-
-        const removeBtn = blockElement.querySelector('.remove-btn');
-        removeBtn.addEventListener('click', () => removeCanIdBlock(canId));
+function saveWidgetsToStorage() {
+    const widgetsObj = {};
+    widgets.forEach((widget, id) => {
+        const saveWidget = { ...widget };
+        delete saveWidget.frameCount; // Don't save frame count
+        widgetsObj[id] = saveWidget;
     });
-
-    const blockCountElem = document.getElementById('blockCount');
-    if (blockCountElem) {
-        blockCountElem.textContent = canIdBlocks.size;
-    }
-
-    // Initialize charts for each block
-    setTimeout(() => {
-        canIdBlocks.forEach((block, canId) => {
-            initChartsForBlock(block, canId);
-        });
-    }, 100);
-}
-
-// Process CAN frame for widgets
-export function processCANFrameForWidgets(frame) {
-    const canId = frame.id.toLowerCase();
-    const data = hexToBytes(frame.data);
-    const timestamp = new Date().toLocaleTimeString();
-
-    // Process CAN ID blocks
-    const block = canIdBlocks.get(canId);
-    if (block && block.enabled) {
-        block.frameCount++;
-        const frameCountElem = document.getElementById(`frame-count-${canId}`);
-        if (frameCountElem) {
-            frameCountElem.textContent = block.frameCount;
-        }
-
-        // Process each byte configuration
-        for (let i = 0; i < block.byteConfigs.length; i++) {
-            const config = block.byteConfigs[i];
-            if (!config || data.length <= i) continue;
-
-            const parsedConfig = parseByteConfig(config);
-            if (!parsedConfig) continue;
-
-            // Calculate value based on configuration
-            let value = calculateValue(parsedConfig, data);
-
-            // Update chart data
-            const chartKey = parsedConfig.key;
-            if (!block.chartData[chartKey]) {
-                block.chartData[chartKey] = {
-                    labels: [],
-                    data: [],
-                    chart: null,
-                    type: parsedConfig.type
-                };
-            }
-
-            const chartData = block.chartData[chartKey];
-
-            // Add new data point
-            chartData.labels.push(timestamp);
-            chartData.data.push(value);
-
-            // Limit to MAX_POINTS
-            if (chartData.labels.length > MAX_POINTS) {
-                chartData.labels.shift();
-                chartData.data.shift();
-            }
-
-            // Update last value display
-            const lastValueElem = document.getElementById(`last-value-${block.canId}-${chartKey}`);
-            if (lastValueElem) {
-                lastValueElem.textContent = value.toFixed(parsedConfig.decimalPlaces);
-            }
-
-            // Update chart
-            if (chartData.chart) {
-                chartData.chart.data.labels = chartData.labels;
-                chartData.chart.data.datasets[0].data = chartData.data;
-                chartData.chart.update('none');
-            }
-        }
-    }
-}
-
-// Helper functions for widgets
-function parseByteConfig(config) {
-    const singleBytePattern = /^(\d+)$/;
-    const signedWordPattern = /^(\d+)-(\d+)$/;
-    const unsignedWordPattern = /^(\d+)-(\d+)\(U\)$/i;
-    const floatPattern = /^(\d+)-(\d+)\(F(?:,(\d+))?\)$/i;
-
-    let match;
-
-    if ((match = config.match(singleBytePattern))) {
-        const byteIndex = parseInt(match[1]);
-        if (byteIndex >= 0 && byteIndex <= 7) {
-            return {
-                type: 'byte',
-                key: `byte${byteIndex}`,
-                byteIndex: byteIndex,
-                signed: true,
-                decimalPlaces: 0
-            };
-        }
-    } else if ((match = config.match(signedWordPattern))) {
-        const start = parseInt(match[1]);
-        const end = parseInt(match[2]);
-        if (start >= 0 && end <= 7 && end - start === 1) {
-            return {
-                type: 'word',
-                key: `word${start}-${end}(S)`,
-                startByte: Math.min(start, end),
-                endByte: Math.max(start, end),
-                signed: true,
-                decimalPlaces: 0
-            };
-        }
-    } else if ((match = config.match(unsignedWordPattern))) {
-        const start = parseInt(match[1]);
-        const end = parseInt(match[2]);
-        if (start >= 0 && end <= 7 && end - start === 1) {
-            return {
-                type: 'word',
-                key: `word${start}-${end}(U)`,
-                startByte: Math.min(start, end),
-                endByte: Math.max(start, end),
-                signed: false,
-                decimalPlaces: 0
-            };
-        }
-    } else if ((match = config.match(floatPattern))) {
-        const start = parseInt(match[1]);
-        const end = parseInt(match[2]);
-        const decimals = match[3] ? parseInt(match[3]) : 2;
-        if (start >= 0 && end <= 7 && end - start === 3) {
-            return {
-                type: 'float',
-                key: `float${start}-${end}`,
-                startByte: Math.min(start, end),
-                endByte: Math.max(start, end),
-                signed: true,
-                decimalPlaces: decimals
-            };
-        }
-    }
-
-    return null;
-}
-
-function calculateValue(parsedConfig, data) {
-    let value = 0;
-
-    switch (parsedConfig.type) {
-        case 'byte':
-            if (data.length > parsedConfig.byteIndex) {
-                value = data[parsedConfig.byteIndex];
-                if (parsedConfig.signed && value > 127) {
-                    value = value - 256;
-                }
-            }
-            break;
-        case 'word':
-            if (data.length > parsedConfig.endByte) {
-                const highByte = data[parsedConfig.startByte];
-                const lowByte = data[parsedConfig.endByte];
-                value = (highByte << 8) | lowByte;
-
-                if (parsedConfig.signed && value > 32767) {
-                    value = value - 65536;
-                }
-            }
-            break;
-        case 'float':
-            if (data.length > parsedConfig.endByte) {
-                const buffer = new ArrayBuffer(4);
-                const view = new DataView(buffer);
-                view.setUint8(0, data[parsedConfig.startByte]);
-                view.setUint8(1, data[parsedConfig.startByte + 1]);
-                view.setUint8(2, data[parsedConfig.startByte + 2]);
-                view.setUint8(3, data[parsedConfig.startByte + 3]);
-                value = view.getFloat32(0, false);
-                value = parseFloat(value.toFixed(parsedConfig.decimalPlaces));
-            }
-            break;
-    }
-
-    return value;
-}
-
-function renderChartsForBlock(block) {
-    if (Object.keys(block.chartData).length === 0) {
-        return '<div class="no-data">No charts configured. Configure byte inputs to display charts.</div>';
-    }
-
-    let chartsHTML = '';
-
-    for (const [key, chartData] of Object.entries(block.chartData)) {
-        chartsHTML += `
-            <div class="chart-container mini-chart-container">
-                <div class="chart-header">
-                    <h4>${getChartTitle(key, chartData.type)}</h4>
-                    <div class="chart-stats">
-                        <span>Points: ${chartData.data.length}</span>
-                        <span id="last-value-${block.canId}-${key}">0</span>
-                    </div>
-                </div>
-                <canvas id="chart-${block.canId}-${key}"></canvas>
-            </div>
-        `;
-    }
-
-    return chartsHTML;
-}
-
-function getChartTitle(key, type) {
-    switch (type) {
-        case 'byte':
-            const byteNum = key.replace('byte', '');
-            return `Byte ${byteNum}`;
-        case 'word':
-            if (key.includes('(U)')) {
-                const bytes = key.replace('word', '').replace('(U)', '');
-                return `Bytes ${bytes} (Unsigned)`;
-            } else {
-                const bytes = key.replace('word', '').replace('(S)', '');
-                return `Bytes ${bytes} (Signed)`;
-            }
-        case 'float':
-            const floatBytes = key.replace('float', '');
-            return `Bytes ${floatBytes} (Float)`;
-        default:
-            return key;
-    }
-}
-
-function initChartsForBlock(block, canId) {
-    for (const [key, chartData] of Object.entries(block.chartData)) {
-        const canvasId = `chart-${canId}-${key}`;
-        const canvas = document.getElementById(canvasId);
-        if (!canvas) continue;
-
-        const ctx = canvas.getContext('2d');
-
-        if (chartData.chart) {
-            chartData.chart.destroy();
-        }
-
-        chartData.chart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: chartData.labels,
-                datasets: [{
-                    label: key,
-                    data: chartData.data,
-                    borderColor: chartColors[Object.keys(block.chartData).indexOf(key) % chartColors.length],
-                    backgroundColor: 'rgba(0, 0, 0, 0.1)',
-                    borderWidth: 2,
-                    tension: 0.4,
-                    fill: false,
-                    pointRadius: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                animation: { duration: 0 },
-                plugins: { legend: { display: false } },
-                scales: {
-                    x: { display: false },
-                    y: {
-                        display: true,
-                        beginAtZero: false,
-                        grid: { color: 'rgba(0, 0, 0, 0.1)' }
-                    }
-                },
-                interaction: { intersect: false, mode: 'index' }
-            }
-        });
-    }
-}
-
-export function updateByteConfig(canId, byteIndex, config) {
-    const block = canIdBlocks.get(canId);
-    if (block) {
-        block.byteConfigs[byteIndex] = config.trim();
-        updateChartDataStructure(block);
-        renderCanIdBlocks();
-
-        // Save to localStorage
-        const blocksObj = {};
-        canIdBlocks.forEach((value, key) => {
-            const saveBlock = { ...value };
-            delete saveBlock.chartData;
-            delete saveBlock.frameCount;
-            blocksObj[key] = saveBlock;
-        });
-        localStorage.setItem('canIdBlocks', JSON.stringify(blocksObj));
-    }
-}
-
-function updateChartDataStructure(block) {
-    const chartKeys = new Set();
-
-    for (let i = 0; i < block.byteConfigs.length; i++) {
-        const config = block.byteConfigs[i];
-        if (!config) continue;
-
-        const parsed = parseByteConfig(config);
-        if (parsed) {
-            chartKeys.add(parsed.key);
-        }
-    }
-
-    for (const key of chartKeys) {
-        if (!block.chartData[key]) {
-            block.chartData[key] = {
-                labels: [],
-                data: [],
-                chart: null,
-                type: 'byte'
-            };
-        }
-    }
-
-    for (const key in block.chartData) {
-        if (!chartKeys.has(key)) {
-            if (block.chartData[key].chart) {
-                block.chartData[key].chart.destroy();
-            }
-            delete block.chartData[key];
-        }
-    }
-}
-
-function toggleBlock(canId) {
-    const block = canIdBlocks.get(canId);
-    if (block) {
-        block.enabled = !block.enabled;
-
-        // Save to localStorage
-        const blocksObj = {};
-        canIdBlocks.forEach((value, key) => {
-            const saveBlock = { ...value };
-            delete saveBlock.chartData;
-            delete saveBlock.frameCount;
-            blocksObj[key] = saveBlock;
-        });
-        localStorage.setItem('canIdBlocks', JSON.stringify(blocksObj));
-
-        renderCanIdBlocks();
-    }
-}
-
-function removeCanIdBlock(canId) {
-    const block = canIdBlocks.get(canId);
-    if (block) {
-        for (const chartId in block.chartData) {
-            if (block.chartData[chartId].chart) {
-                block.chartData[chartId].chart.destroy();
-            }
-        }
-    }
-
-    canIdBlocks.delete(canId);
-
-    // Update localStorage
-    const blocksObj = {};
-    canIdBlocks.forEach((value, key) => {
-        const saveBlock = { ...value };
-        delete saveBlock.chartData;
-        delete saveBlock.frameCount;
-        blocksObj[key] = saveBlock;
-    });
-    localStorage.setItem('canIdBlocks', JSON.stringify(blocksObj));
-
-    renderCanIdBlocks();
+    localStorage.setItem('canWidgets', JSON.stringify(widgetsObj));
 }

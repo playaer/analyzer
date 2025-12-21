@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CAN Bus Analyzer</title>
     <link rel="stylesheet" href="style.css">
+    <!--    <link rel="stylesheet" href="widgets.css">-->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script type="module" src="app.js"></script>
 </head>
@@ -56,16 +57,15 @@
                 </div>
             </div>
         </div>
-
-        <!-- Второй ряд: Блоки виджетов на всю ширину -->
+        <!-- Block 3: CAN ID Widgets -->
         <div class="section">
             <div class="section-title">
-                <span>Widgets</span>
+                <span>CAN ID Widgets</span>
                 <span class="data-points">Widgets: <span id="widgetCount">0</span></span>
             </div>
 
             <div class="controls-row">
-                <button id="addWidgetBtn" class="add-btn">Add Widget</button>
+                <button class="add-btn" id="addWidgetBtn">Add Widget</button>
             </div>
 
             <div id="widgetsContainer" class="widgets-container">
@@ -73,45 +73,81 @@
             </div>
         </div>
     </div>
-</div>
 
-<!-- Модальное окно добавления виджета -->
-<div id="widgetModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>Add Widget</h3>
-            <span class="close">&times;</span>
-        </div>
-        <div class="modal-body">
-            <div class="form-group">
-                <label for="widgetType">Widget Type:</label>
-                <select id="widgetType">
-                    <option value="canChart">CAN ID Chart</option>
-                </select>
+
+
+    <!-- Modal for widget configuration -->
+    <div id="widgetModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Widget Configuration</h3>
+                <span class="modal-close">&times;</span>
             </div>
-            <div id="widgetSettings">
-                <!-- Настройки для CAN ID Chart -->
+            <div class="modal-body">
                 <div class="form-group">
-                    <label for="widgetCanId">CAN ID (hex):</label>
-                    <input type="text" id="widgetCanId" placeholder="0x200">
+                    <label for="modalWidgetId">Widget ID:</label>
+                    <input type="text" id="modalWidgetId" placeholder="widget-1">
                 </div>
-                <div class="byte-inputs-grid">
-                    <input type="text" id="byteConfig0" placeholder="Byte 0 (0, 0-1, 0-1(U), 0-3(F,2))">
-                    <input type="text" id="byteConfig1" placeholder="Byte 1 (0, 0-1, 0-1(U), 0-3(F,2))">
-                    <input type="text" id="byteConfig2" placeholder="Byte 2 (0, 0-1, 0-1(U), 0-3(F,2))">
-                    <input type="text" id="byteConfig3" placeholder="Byte 3 (0, 0-1, 0-1(U), 0-3(F,2))">
-                    <input type="text" id="byteConfig4" placeholder="Byte 4 (0, 0-1, 0-1(U), 0-3(F,2))">
-                    <input type="text" id="byteConfig5" placeholder="Byte 5 (0, 0-1, 0-1(U), 0-3(F,2))">
-                    <input type="text" id="byteConfig6" placeholder="Byte 6 (0, 0-1, 0-1(U), 0-3(F,2))">
-                    <input type="text" id="byteConfig7" placeholder="Byte 7 (0, 0-1, 0-1(U), 0-3(F,2))">
+                <div class="form-group">
+                    <label for="modalCanId">CAN ID (hex):</label>
+                    <input type="text" id="modalCanId" placeholder="0x200">
+                </div>
+                <div class="form-group">
+                    <label for="modalWidgetType">Widget Type:</label>
+                    <select id="modalWidgetType">
+                        <option value="canChart">Single Chart</option>
+                        <option value="canChart2">Dual Chart</option>
+                    </select>
+                </div>
+
+                <!-- Single Chart Configuration -->
+                <div id="singleChartConfig" class="widget-config-section">
+                    <h4>Single Chart Configuration</h4>
+                    <div class="byte-inputs">
+                        <div class="byte-input">
+                            <label>Data Source 1:</label>
+                            <input type="text" placeholder="0, 0-1, 0-1(U), 0-3(F,2)">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="singleChartColor">Line Color:</label>
+                        <input type="color" id="singleChartColor" value="#ff6384">
+                    </div>
+                </div>
+
+                <!-- Dual Chart Configuration -->
+                <div id="dualChartConfig" class="widget-config-section" style="display: none;">
+                    <h4>Dual Chart Configuration</h4>
+                    <div class="byte-inputs">
+                        <div class="byte-input">
+                            <label>Data Source 1:</label>
+                            <input type="text" placeholder="0, 0-1, 0-1(U), 0-3(F,2)">
+                        </div>
+                        <div class="byte-input">
+                            <label>Data Source 2:</label>
+                            <input type="text" placeholder="2, 2-3, 2-3(U), 4-7(F,2)">
+                        </div>
+                    </div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label for="dualChartColor1">Line 1 Color:</label>
+                            <input type="color" id="dualChartColor1" value="#ff6384">
+                        </div>
+                        <div class="form-group">
+                            <label for="dualChartColor2">Line 2 Color:</label>
+                            <input type="color" id="dualChartColor2" value="#36a2eb">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button id="modalSaveBtn" class="save-btn">Save</button>
+                    <button id="modalCancelBtn" class="cancel-btn">Cancel</button>
                 </div>
             </div>
-        </div>
-        <div class="modal-footer">
-            <button id="saveWidgetBtn" class="add-btn">Add Widget</button>
-            <button id="cancelWidgetBtn" class="remove-btn">Cancel</button>
         </div>
     </div>
 </div>
+
 </body>
 </html>
