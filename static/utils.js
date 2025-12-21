@@ -1,8 +1,15 @@
 // Utility functions
 export const MAX_POINTS = 50;
 
+// Generate random widget ID
+export function generateWidgetId() {
+    return 'widget-' + Math.random().toString(36).substring(2, 11);
+}
+
 // Parse byte configuration string
 export function parseByteConfig(config) {
+    if (!config || typeof config !== 'string') return null;
+
     const singleBytePattern = /^(\d+)$/;
     const signedWordPattern = /^(\d+)-(\d+)$/;
     const unsignedWordPattern = /^(\d+)-(\d+)U$/i;
@@ -64,6 +71,8 @@ export function parseByteConfig(config) {
 
 // Calculate value from parsed config
 export function calculateValue(parsedConfig, data) {
+    if (!parsedConfig || !data) return 0;
+
     let value = 0;
 
     switch (parsedConfig.type) {
@@ -112,7 +121,7 @@ export function hexToBytes(hex) {
     return bytes;
 }
 
-// Generate safe ID from string
+// Generate safe ID for HTML elements
 export function generateSafeId(str) {
     return str.replace(/[^a-zA-Z0-9-]/g, '-');
 }

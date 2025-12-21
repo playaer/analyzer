@@ -1,9 +1,23 @@
 // Filters module
-export let filters = new Set(); // Set<number> - храним числовые CAN ID
+export let filters = new Set(); // Храним числовые CAN ID
+
+// DOM элемент для ввода нового фильтра
+let newFilterInput = null;
 
 // Initialize filters module
 export function initFilters() {
     console.log('Filters module initialized');
+    newFilterInput = document.getElementById('newFilterId');
+
+    // Назначаем обработчик для кнопки добавления фильтра
+    const addFilterBtn = document.querySelector('#filtersContainer').parentElement.querySelector('.add-btn');
+    if (addFilterBtn) {
+        addFilterBtn.addEventListener('click', () => {
+            if (newFilterInput && newFilterInput.value) {
+                addFilter(newFilterInput.value.trim().toLowerCase());
+            }
+        });
+    }
 }
 
 // Add a filter
@@ -18,23 +32,24 @@ export async function addFilter(canIdStr) {
     const canIdNum = parseInt(canIdStr, 16);
     console.log('CAN ID number:', canIdNum);
 
+    // Проверяем, есть ли уже такой фильтр в локальном наборе
     if (filters.has(canIdNum)) {
         alert('Filter already exists');
         return;
     }
 
     try {
-        // Save to server
-        console.log('Saving filter to server...');
+        console.log('Sending filter to server...');
+        // Исправляем запрос: отправляем can_id как число, enabled как true
         const response = await fetch('/api/filters', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                can_id: canIdNum,
+                can_id: canIdNum,  // Отправляем как число
                 mask: 0xFFFFFFFF,
-                enabled: true
+                enabled: true       // Отправляем как boolean
             })
         });
 
@@ -47,7 +62,12 @@ export async function addFilter(canIdStr) {
         const savedFilter = await response.json();
         console.log('Filter saved to server:', savedFilter);
 
-        // Reload filters from server
+        // Очищаем поле ввода
+        if (newFilterInput) {
+            newFilterInput.value = '';
+        }
+
+        // Перезагружаем фильтры с сервера
         await updateFilterDisplay();
 
     } catch (error) {
@@ -61,16 +81,17 @@ export async function removeFilter(canIdHex) {
     console.log('Removing filter:', canIdHex);
 
     try {
-        // Delete from server using CAN ID
+        // Удаляем с сервера по CAN ID (hex строке)
         const deleteResponse = await fetch(`/api/filters?can_id=${canIdHex}`, {
             method: 'DELETE'
         });
 
         if (!deleteResponse.ok) {
-            throw new Error('Failed to delete filter from server');
+            const errorText = await deleteResponse.text();
+            throw new Error(`Failed to delete filter: ${errorText}`);
         }
 
-        // Reload filters from server
+        // Перезагружаем фильтры
         await updateFilterDisplay();
 
     } catch (error) {
@@ -97,52 +118,49 @@ export async function updateFilterDisplay() {
             const serverFilters = await response.json();
             console.log('Server filters loaded:', serverFilters);
 
-            // Update local filters set
+            // Очищаем контейнер
+            container.innerHTML = '';
+
+            // Очищаем и обновляем локальный набор фильтров
             filters.clear();
-            const enabledFilters = [];
 
             serverFilters.forEach(filter => {
                 if (filter.enabled) {
-                    filters.add(filter.can_id);
-                    enabledFilters.push(filter);
+                    const canIdNum = filter.can_id;
+                    const canIdHex = '0x' + canIdNum.toString(16).toLowerCase();
+
+                    // Добавляем в локальный набор
+                    filters.add(canIdNum);
+
+                    // Создаем элемент фильтра
+                    const filterElement = document.createElement('div');
+                    filterElement.className = 'filter-item';
+                    filterElement.innerHTML = `
+                        <div class="filter-header">
+                            <span class="filter-can-id">${canIdHex}</span>
+                            <button class="remove-btn" data-canid="${canIdHex}">×</button>
+                        </div>
+                        <div class="data-points">
+                            Frames: <span id="count-${canIdHex}">0</span>
+                        </div>
+                    `;
+
+                    // Добавляем обработчик удаления
+                    const removeBtn = filterElement.querySelector('.remove-btn');
+                    removeBtn.addEventListener('click', async () => {
+                        await removeFilter(canIdHex);
+                    });
+
+                    container.appendChild(filterElement);
                 }
             });
 
-            console.log('Enabled filters:', enabledFilters);
-            console.log('Filters set size:', filters.size);
-
-            // Clear and rebuild container
-            container.innerHTML = '';
-
-            enabledFilters.forEach(filter => {
-                const canIdHex = '0x' + filter.can_id.toString(16).toLowerCase();
-                const filterElement = document.createElement('div');
-                filterElement.className = 'filter-item';
-                filterElement.innerHTML = `
-                    <div class="filter-header">
-                        <span class="filter-can-id">${canIdHex}</span>
-                        <button class="remove-btn" data-canid="${canIdHex}">×</button>
-                    </div>
-                    <div class="data-points">
-                        Frames: <span id="count-${canIdHex}">0</span>
-                    </div>
-                `;
-
-                // Add event listener to remove button
-                const removeBtn = filterElement.querySelector('.remove-btn');
-                removeBtn.addEventListener('click', async () => {
-                    await removeFilter(canIdHex);
-                });
-
-                container.appendChild(filterElement);
-            });
-
+            // Обновляем счетчик
             const filterCount = document.getElementById('filterCount');
             if (filterCount) {
-                filterCount.textContent = enabledFilters.length;
-                console.log('Filter count updated:', enabledFilters.length);
+                filterCount.textContent = filters.size;
+                console.log('Filter count updated:', filters.size);
             }
-
         } else {
             console.error('Failed to fetch filters, status:', response.status);
         }

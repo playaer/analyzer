@@ -1,56 +1,44 @@
 // Основной файл приложения
-import { initWebSocket, connectWebSocket as connectWS, disconnectWebSocket, sendWebSocketMessage, isWebSocketConnected } from './websocket.js';
+import { initWebSocket, connectWebSocket } from './websocket.js';
 import { initFilters, updateFilterDisplay } from './filters.js';
 import { initWidgets, processCANFrameForWidgets } from './widgets.js';
 import { initSender, sendCANFrame } from './sender.js';
 
-// Initialize the application
+// Инициализация приложения
 export async function init() {
     console.log('Initializing application...');
 
-    // Initialize modules
+    // Инициализируем модули
     initWebSocket(handleWebSocketMessage, updateConnectionStatus);
     initFilters();
     initWidgets();
     initSender();
 
-    // Load filters from server
-    try {
-        await updateFilterDisplay();
-    } catch (error) {
-        console.error('Failed to load filters:', error);
-    }
+    // Загружаем фильтры с сервера
+    await updateFilterDisplay();
 
-    // Auto-connect WebSocket
+    // Автоподключение WebSocket через 1 секунду
     setTimeout(() => {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${protocol}//${window.location.host}/ws`;
-        console.log('Auto-connecting to WebSocket:', wsUrl);
-        connectWS(wsUrl);
+        console.log('Auto-connecting to WebSocket...');
+        connectWebSocket(wsUrl);
     }, 1000);
 }
 
-// Handle incoming WebSocket messages
+// Обработка сообщений WebSocket
 function handleWebSocketMessage(data) {
-    try {
-        if (data.type === 'can_frame') {
-            processCANFrame(data);
-        }
-    } catch (error) {
-        console.error('Error processing WebSocket message:', error);
+    if (data.type === 'can_frame') {
+        processCANFrame(data);
     }
 }
 
-// Process CAN frame data
+// Обработка CAN фреймов
 function processCANFrame(frame) {
-    try {
-        processCANFrameForWidgets(frame);
-    } catch (error) {
-        console.error('Error processing CAN frame:', error);
-    }
+    processCANFrameForWidgets(frame);
 }
 
-// Update connection status
+// Обновление статуса подключения
 function updateConnectionStatus(connected) {
     const statusElem = document.getElementById('connectionStatus');
     if (statusElem) {
@@ -59,16 +47,8 @@ function updateConnectionStatus(connected) {
     }
 }
 
-// Expose functions to window
+// Экспортируем функции в глобальную область видимости
 window.sendCANFrame = sendCANFrame;
 
-// Initialize on load
+// Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', init);
-
-// Cleanup on page unload
-window.addEventListener('beforeunload', function() {
-    // Close WebSocket
-    if (typeof disconnectWebSocket === 'function') {
-        disconnectWebSocket();
-    }
-});
