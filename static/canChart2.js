@@ -13,14 +13,23 @@ export const canChart2Widget = {
             widget.chart.destroy();
         }
 
+        // Инициализируем данные виджета
+        if (!widget.data) {
+            widget.data = {
+                labels: [],
+                values1: [],
+                values2: []
+            };
+        }
+
         widget.chart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: widget.data?.labels || [],
+                labels: widget.data.labels,
                 datasets: [
                     {
                         label: widget.config?.label1 || 'Value 1',
-                        data: widget.data?.values1 || [],
+                        data: widget.data.values1,
                         borderColor: widget.config?.color1 || '#ff6384',
                         backgroundColor: 'rgba(255, 99, 132, 0.1)',
                         borderWidth: 2,
@@ -30,7 +39,7 @@ export const canChart2Widget = {
                     },
                     {
                         label: widget.config?.label2 || 'Value 2',
-                        data: widget.data?.values2 || [],
+                        data: widget.data.values2,
                         borderColor: widget.config?.color2 || '#36a2eb',
                         backgroundColor: 'rgba(54, 162, 235, 0.1)',
                         borderWidth: 2,
@@ -55,12 +64,6 @@ export const canChart2Widget = {
                 }
             }
         });
-
-        widget.data = widget.data || {
-            labels: [],
-            values1: [],
-            values2: []
-        };
     },
 
     processFrame(widgetId, frame, widget) {
@@ -77,6 +80,15 @@ export const canChart2Widget = {
         const value1 = calculateValue(parsedConfig1, data);
         const value2 = calculateValue(parsedConfig2, data);
 
+        // Инициализируем данные, если их нет
+        if (!widget.data) {
+            widget.data = {
+                labels: [],
+                values1: [],
+                values2: []
+            };
+        }
+
         // Update widget data
         widget.data.labels.push(timestamp);
         widget.data.values1.push(value1);
@@ -90,8 +102,9 @@ export const canChart2Widget = {
         }
 
         // Update last values display
-        const lastValue1Elem = document.getElementById(`last-value1-${widgetId}`);
-        const lastValue2Elem = document.getElementById(`last-value2-${widgetId}`);
+        const safeId = widgetId.replace(/[^a-zA-Z0-9-]/g, '-');
+        const lastValue1Elem = document.getElementById(`last-value1-${safeId}`);
+        const lastValue2Elem = document.getElementById(`last-value2-${safeId}`);
 
         if (lastValue1Elem) {
             lastValue1Elem.textContent = value1.toFixed(parsedConfig1.decimalPlaces);
@@ -112,8 +125,8 @@ export const canChart2Widget = {
     getConfigFromModal() {
         const inputs = document.querySelectorAll('#dualChartConfig .byte-input input');
         return {
-            dataSource1: inputs[0]?.value || '',
-            dataSource2: inputs[1]?.value || '',
+            dataSource1: inputs[0] ? inputs[0].value : '',
+            dataSource2: inputs[1] ? inputs[1].value : '',
             color1: document.getElementById('dualChartColor1').value,
             color2: document.getElementById('dualChartColor2').value,
             label1: 'Value 1',
@@ -135,15 +148,14 @@ export const canChart2Widget = {
                 <canvas id="chart-${safeId}" class="widget-chart"></canvas>
             </div>
             <div class="widget-stats">
-                <span>Frames: <span id="frame-count-${safeId}">${widget.frameCount}</span></span>
+                <span>Frames: <span id="frame-count-${safeId}">${widget.frameCount || 0}</span></span>
                 <span>Value 1: <span id="last-value1-${safeId}">0</span></span>
                 <span>Value 2: <span id="last-value2-${safeId}">0</span></span>
             </div>
         `;
     },
 
-    destroy(widgetId) {
-        const widget = widgets.get(widgetId);
+    destroy(widgetId, widget) {
         if (widget && widget.chart) {
             widget.chart.destroy();
         }

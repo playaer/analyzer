@@ -15,48 +15,60 @@ export async function init() {
     initSender();
 
     // Load filters from server
-    await updateFilterDisplay();
+    try {
+        await updateFilterDisplay();
+    } catch (error) {
+        console.error('Failed to load filters:', error);
+    }
 
     // Auto-connect WebSocket
     setTimeout(() => {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${protocol}//${window.location.host}/ws`;
+        console.log('Auto-connecting to WebSocket:', wsUrl);
         connectWS(wsUrl);
     }, 1000);
 }
 
 // Handle incoming WebSocket messages
 function handleWebSocketMessage(data) {
-    if (data.type === 'can_frame') {
-        processCANFrame(data);
+    try {
+        if (data.type === 'can_frame') {
+            processCANFrame(data);
+        }
+    } catch (error) {
+        console.error('Error processing WebSocket message:', error);
     }
 }
 
 // Process CAN frame data
 function processCANFrame(frame) {
-    processCANFrameForWidgets(frame);
+    try {
+        processCANFrameForWidgets(frame);
+    } catch (error) {
+        console.error('Error processing CAN frame:', error);
+    }
 }
 
 // Update connection status
 function updateConnectionStatus(connected) {
     const statusElem = document.getElementById('connectionStatus');
-    statusElem.textContent = connected ? 'Connected' : 'Disconnected';
-    statusElem.className = `status ${connected ? 'connected' : 'disconnected'}`;
+    if (statusElem) {
+        statusElem.textContent = connected ? 'Connected' : 'Disconnected';
+        statusElem.className = `status ${connected ? 'connected' : 'disconnected'}`;
+    }
 }
 
 // Expose functions to window
 window.sendCANFrame = sendCANFrame;
-window.connectWebSocket = () => {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
-    connectWS(wsUrl);
-};
-window.disconnectWebSocket = disconnectWebSocket;
 
 // Initialize on load
 document.addEventListener('DOMContentLoaded', init);
 
 // Cleanup on page unload
 window.addEventListener('beforeunload', function() {
-    disconnectWebSocket();
+    // Close WebSocket
+    if (typeof disconnectWebSocket === 'function') {
+        disconnectWebSocket();
+    }
 });

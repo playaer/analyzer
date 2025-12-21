@@ -208,27 +208,6 @@ export function renderWidgets() {
     document.getElementById('widgetCount').textContent = widgets.size;
 }
 
-function removeWidget(widgetId) {
-    if (confirm('Удалить этот виджет?')) {
-        const widget = widgets.get(widgetId);
-        if (widget) {
-            // Clean up chart resources
-            switch (widget.type) {
-                case 'canChart':
-                    canChartWidget.destroy(widgetId);
-                    break;
-                case 'canChart2':
-                    canChart2Widget.destroy(widgetId);
-                    break;
-            }
-        }
-
-        widgets.delete(widgetId);
-        renderWidgets();
-        saveWidgetsToStorage();
-    }
-}
-
 // Storage functions
 function loadWidgetsFromStorage() {
     try {
@@ -238,7 +217,9 @@ function loadWidgetsFromStorage() {
             Object.entries(savedWidgets).forEach(([id, widget]) => {
                 widgets.set(id, {
                     ...widget,
-                    frameCount: 0 // Reset frame count on load
+                    frameCount: 0, // Reset frame count on load
+                    chart: null,   // Don't restore chart object
+                    data: null     // Don't restore data
                 });
             });
         }
@@ -250,9 +231,58 @@ function loadWidgetsFromStorage() {
 function saveWidgetsToStorage() {
     const widgetsObj = {};
     widgets.forEach((widget, id) => {
+        // Create a clean copy without circular references
         const saveWidget = { ...widget };
-        delete saveWidget.frameCount; // Don't save frame count
+
+        // Remove non-serializable properties
+        delete saveWidget.chart;
+        delete saveWidget.data;
+        delete saveWidget.frameCount;
+
         widgetsObj[id] = saveWidget;
     });
-    localStorage.setItem('canWidgets', JSON.stringify(widgetsObj));
+
+    try {
+        localStorage.setItem('canWidgets', JSON.stringify(widgetsObj));
+    } catch (e) {
+        console.error('Failed to save widgets:', e);
+    }
 }
+
+// In removeWidget function:
+function removeWidget(widgetId) {
+    if (confirm('Удалить этот виджет?')) {
+        const widget = widgets.get(widgetId);
+        if (widget) {
+            // Clean up chart resources
+            switch (widget.type) {
+                case 'canChart':
+                    canChartWidget.destroy(widgetId, widget);
+                    break;
+                case 'canChart2':
+                    canChart2Widget.destroy(widgetId, widget);
+                    break;
+            }
+        }
+
+        widgets.delete(widgetId);
+        renderWidgets();
+        saveWidgetsToStorage();
+    }
+}
+
+// In renderWidgets function, update the setTimeout:
+setTimeout(() => {
+    widgets.forEach((widget, widgetId) => {
+        if (widget && widget.type) {
+            switch (widget.type) {
+                case 'canChart':
+                    canChartWidget.initChart(widgetId, widget);
+                    break;
+                case 'canChart2':
+                    canChart2Widget.initChart(widgetId, widget);
+                    break;
+            }
+        }
+    });
+}, 100);

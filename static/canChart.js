@@ -13,13 +13,18 @@ export const canChartWidget = {
             widget.chart.destroy();
         }
 
+        // Инициализируем данные виджета
+        if (!widget.data) {
+            widget.data = { labels: [], values: [] };
+        }
+
         widget.chart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: widget.data?.labels || [],
+                labels: widget.data.labels,
                 datasets: [{
                     label: widget.config?.label || 'Value',
-                    data: widget.data?.values || [],
+                    data: widget.data.values,
                     borderColor: widget.config?.color || '#ff6384',
                     backgroundColor: 'rgba(255, 99, 132, 0.1)',
                     borderWidth: 2,
@@ -43,8 +48,6 @@ export const canChartWidget = {
                 }
             }
         });
-
-        widget.data = widget.data || { labels: [], values: [] };
     },
 
     processFrame(widgetId, frame, widget) {
@@ -58,6 +61,11 @@ export const canChartWidget = {
 
         const value = calculateValue(parsedConfig, data);
 
+        // Инициализируем данные, если их нет
+        if (!widget.data) {
+            widget.data = { labels: [], values: [] };
+        }
+
         // Update widget data
         widget.data.labels.push(timestamp);
         widget.data.values.push(value);
@@ -69,7 +77,8 @@ export const canChartWidget = {
         }
 
         // Update last value display
-        const lastValueElem = document.getElementById(`last-value-${widgetId}`);
+        const safeId = widgetId.replace(/[^a-zA-Z0-9-]/g, '-');
+        const lastValueElem = document.getElementById(`last-value-${safeId}`);
         if (lastValueElem) {
             lastValueElem.textContent = value.toFixed(parsedConfig.decimalPlaces);
         }
@@ -83,8 +92,9 @@ export const canChartWidget = {
     },
 
     getConfigFromModal() {
+        const dataSourceInput = document.querySelector('#singleChartConfig .byte-input input');
         return {
-            dataSource: document.querySelector('#singleChartConfig input').value,
+            dataSource: dataSourceInput ? dataSourceInput.value : '',
             color: document.getElementById('singleChartColor').value,
             label: 'Value'
         };
@@ -104,14 +114,13 @@ export const canChartWidget = {
                 <canvas id="chart-${safeId}" class="widget-chart"></canvas>
             </div>
             <div class="widget-stats">
-                <span>Frames: <span id="frame-count-${safeId}">${widget.frameCount}</span></span>
+                <span>Frames: <span id="frame-count-${safeId}">${widget.frameCount || 0}</span></span>
                 <span>Last: <span id="last-value-${safeId}">0</span></span>
             </div>
         `;
     },
 
-    destroy(widgetId) {
-        const widget = widgets.get(widgetId);
+    destroy(widgetId, widget) {
         if (widget && widget.chart) {
             widget.chart.destroy();
         }
