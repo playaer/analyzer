@@ -49,7 +49,7 @@ export class CanChartWidget {
     // Отдельный метод для инициализации графиков после добавления в DOM
     initCharts() {
         for (const [key, data] of Object.entries(this.chartData)) {
-            const canvasId = `chart-${this.id}-${key}`;
+            const canvasId = `chart-${this.id}-${key.replace(/[()]/g, '')}`;
             const canvas = this.element.querySelector(`#${canvasId}`);
             if (!canvas) {
                 console.warn(`Canvas element not found: ${canvasId}`);

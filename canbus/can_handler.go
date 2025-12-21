@@ -2,7 +2,6 @@ package canbus
 
 import (
 	"context"
-	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"go.einride.tech/can"
@@ -200,19 +199,6 @@ func (h *CANHandler) Close() {
 	if h.logger != nil {
 		h.logger.Close()
 	}
-}
-
-// ParsePID200 извлекает данные из CAN фрейма с PID=0x200
-func ParsePID200(data []byte) (byte, byte, uint16, error) {
-	if len(data) < 4 {
-		return 0, 0, 0, fmt.Errorf("insufficient data length")
-	}
-
-	byte1 := data[0]
-	byte2 := data[1]
-	byte3_4 := binary.BigEndian.Uint16(data[2:4])
-
-	return byte1, byte2, byte3_4, nil
 }
 
 // Добавьте метод ReloadFilters в структуру CANHandler
