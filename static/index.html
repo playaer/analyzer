@@ -92,36 +92,21 @@
                 <div class="form-group">
                     <label for="modalWidgetType">Widget Type:</label>
                     <select id="modalWidgetType">
-                        <option value="canChart">Single Chart</option>
+                        <option value="numeric">Numeric Values (up to 4 params)</option>
                         <option value="canChart2">Multi Chart (up to 4 params)</option>
                     </select>
                 </div>
 
-                <!-- Single Chart Configuration (упрощенная) -->
-                <!-- Single Chart Configuration -->
-                <div id="singleChartConfig" class="widget-config-section" style="display: none;">
-                    <h4>Single Chart Configuration</h4>
-                    <div id="singleChartParamContainer">
-                        <!-- Single param will be inserted here -->
+                <!-- Numeric Widget Configuration -->
+                <div id="numericConfig" class="widget-config-section" style="display: none;">
+                    <div class="config-header">
+                        <h4>Numeric Widget Parameters</h4>
+                        <button type="button" id="addNumericParamBtn" class="add-param-btn">
+                            + Add Parameter
+                        </button>
                     </div>
-                    <div class="chart-settings">
-                        <h4>Chart Settings</h4>
-                        <div class="grid-2">
-                            <div class="form-group">
-                                <label for="singleChartYMin">Y Min:</label>
-                                <input type="number" id="singleChartYMin" placeholder="Auto">
-                            </div>
-                            <div class="form-group">
-                                <label for="singleChartYMax">Y Max:</label>
-                                <input type="number" id="singleChartYMax" placeholder="Auto">
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="singleChartAutoScale" checked>
-                                <span>Auto Scale Y Axis</span>
-                            </label>
-                        </div>
+                    <div id="numericParamContainer">
+                        <!-- Parameter components will be inserted here -->
                     </div>
                 </div>
 

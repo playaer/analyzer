@@ -454,3 +454,122 @@ button {
     width: auto;
     margin: 0;
 }
+
+/* Стили для Numeric Widget */
+.numeric-content {
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+}
+
+.numeric-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    height: 100%;
+}
+
+.numeric-block {
+    background: white;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.numeric-block:hover {
+    border-color: #667eea;
+    box-shadow: 0 4px 10px rgba(102, 126, 234, 0.2);
+}
+
+.numeric-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #eee;
+}
+
+.numeric-name {
+    font-weight: bold;
+    color: #333;
+    font-size: 0.95em;
+    flex-grow: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.numeric-can-id {
+    background: #667eea;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    font-family: monospace;
+}
+
+.numeric-value-container {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 60px;
+}
+
+.numeric-value {
+    font-size: 2em;
+    font-weight: bold;
+    font-family: 'Courier New', monospace;
+    text-align: center;
+    transition: color 0.3s ease;
+}
+
+.numeric-footer {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid #eee;
+    text-align: center;
+}
+
+.numeric-timestamp {
+    font-size: 0.8em;
+    color: #666;
+    font-family: monospace;
+}
+
+.no-data-message {
+    text-align: center;
+    padding: 40px 20px;
+    color: #999;
+    font-style: italic;
+    background: #fafafa;
+    border-radius: 8px;
+    border: 2px dashed #ddd;
+    grid-column: 1 / -1;
+}
+
+/* Адаптивность для numeric блоков */
+@media (max-width: 768px) {
+    .numeric-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .numeric-value {
+        font-size: 1.8em;
+    }
+}
+
+@media (max-width: 480px) {
+    .numeric-block {
+        padding: 10px;
+    }
+
+    .numeric-value {
+        font-size: 1.5em;
+    }
+}
