@@ -1,0 +1,119 @@
+/* Модальное окно */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    animation: fadeIn 0.3s;
+    overflow-y: auto; /* Разрешаем прокрутку всего окна */
+    padding: 20px 0; /* Отступы сверху и снизу */
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    background-color: white;
+    margin: 20px auto; /* Автоматические отступы вместо фиксированных % */
+    padding: 0;
+    width: 90%;
+    max-width: 700px; /* Увеличим максимальную ширину для формы */
+    max-height: 90vh; /* Ограничиваем высоту окна */
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    animation: slideIn 0.3s;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Чтобы внутренний контент не ломал скругления */
+}
+
+@keyframes slideIn {
+    from { transform: translateY(-50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-header {
+    padding: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    flex-shrink: 0; /* Запрещаем сжиматься */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.5em;
+}
+
+.modal-close {
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.2s;
+    line-height: 1;
+}
+
+.modal-close:hover {
+    color: #ffdd59;
+}
+
+.modal-body {
+    padding: 25px;
+    flex-grow: 1;
+    overflow-y: auto; /* Прокрутка внутри тела модалки, если контента много */
+}
+
+/* Секции конфигурации внутри модалки */
+.widget-config-section {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 20px 0;
+    border: 1px solid #e9ecef;
+}
+
+.widget-config-section h4 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #495057;
+    font-size: 1.1em;
+}
+
+/* Группировка полей в 2 колонки внутри модалки, где нужно */
+.modal .grid-2 {
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+/* Блок с кнопками действий в модальном окне */
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid #e9ecef;
+    flex-shrink: 0; /* Запрещаем сжиматься */
+}
+
+.save-btn {
+    background: linear-gradient(135deg, #1dd1a1 0%, #10ac84 100%);
+    color: white;
+    padding: 12px 24px;
+    min-width: 100px;
+}
+
+.cancel-btn {
+    background: #6c757d;
+    color: white;
+    padding: 12px 24px;
+    min-width: 100px;
+}

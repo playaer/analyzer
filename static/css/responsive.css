@@ -1,0 +1,146 @@
+/* Планшеты (меньше 1024px) */
+@media (max-width: 1024px) {
+    .grid-2 {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .container {
+        border-radius: 15px;
+    }
+
+    .content {
+        padding: 20px;
+    }
+
+    .modal-content {
+        width: 95%;
+        margin: 10px auto;
+        max-height: 95vh;
+    }
+}
+
+/* Большие смартфоны и маленькие планшеты (меньше 768px) */
+@media (max-width: 768px) {
+    .container {
+        border-radius: 10px;
+        margin: 10px;
+    }
+
+    .content {
+        padding: 15px;
+    }
+
+    .section {
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    .section-title {
+        font-size: 1.3em;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    h1 {
+        font-size: 2em;
+    }
+
+    .widgets-container {
+        grid-template-columns: 1fr; /* Одна колонка на мобильных */
+    }
+
+    .byte-inputs {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    .filters-container {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        max-height: 150px;
+    }
+
+    .modal-body {
+        padding: 15px;
+    }
+
+    .widget-config-section {
+        padding: 15px;
+    }
+
+    .modal-header {
+        padding: 15px;
+    }
+
+    .modal-header h3 {
+        font-size: 1.3em;
+    }
+}
+
+/* Маленькие смартфоны (меньше 480px) */
+@media (max-width: 480px) {
+    body {
+        padding: 10px;
+    }
+
+    .content {
+        padding: 10px;
+    }
+
+    .section {
+        padding: 15px;
+    }
+
+    button {
+        padding: 12px 20px;
+        font-size: 14px;
+    }
+
+    .modal-content {
+        width: 98%;
+        margin: 5px auto;
+        max-height: 98vh;
+        border-radius: 8px;
+    }
+
+    .widget-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .widget-btn {
+        width: 100%;
+        margin-bottom: 5px;
+    }
+
+    .byte-inputs {
+        grid-template-columns: 1fr !important; /* Одна колонка на очень маленьких экранах */
+    }
+
+    .modal .grid-2 {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Стили для скроллбаров */
+.filters-container::-webkit-scrollbar,
+.modal-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.filters-container::-webkit-scrollbar-track,
+.modal-body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.filters-container::-webkit-scrollbar-thumb,
+.modal-body::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.filters-container::-webkit-scrollbar-thumb:hover,
+.modal-body::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}

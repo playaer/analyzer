@@ -1,0 +1,6 @@
+/* Основной файл, который импортирует все остальные */
+@import 'base.css';
+@import 'layout.css';
+@import 'components.css';
+@import 'modal.css';
+@import 'responsive.css';
