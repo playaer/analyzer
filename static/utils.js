@@ -1,115 +1,16 @@
 // Utility functions
 export const MAX_POINTS = 50;
 
-// Generate random widget ID
+// Generate unique widget ID
 export function generateWidgetId() {
-    return 'widget-' + Math.random().toString(36).substring(2, 11);
+    const timestamp = Date.now().toString(36);
+    const random = Math.random().toString(36).substring(2, 8);
+    return `widget-${timestamp}-${random}`;
 }
 
-// Parse byte configuration string
-export function parseByteConfig(config) {
-    if (!config || typeof config !== 'string') return null;
-
-    const singleBytePattern = /^(\d+)$/;
-    const signedWordPattern = /^(\d+)-(\d+)$/;
-    const unsignedWordPattern = /^(\d+)-(\d+)U$/i;
-    const floatPattern = /^(\d+)-(\d+)F(?:-(\d+))?$/i;
-
-    let match;
-
-    if ((match = config.match(singleBytePattern))) {
-        const byteIndex = parseInt(match[1]);
-        if (byteIndex >= 0 && byteIndex <= 7) {
-            return {
-                type: 'byte',
-                byteIndex: byteIndex,
-                signed: true,
-                decimalPlaces: 0
-            };
-        }
-    } else if ((match = config.match(signedWordPattern))) {
-        const start = parseInt(match[1]);
-        const end = parseInt(match[2]);
-        if (start >= 0 && end <= 7 && end - start === 1) {
-            return {
-                type: 'word',
-                startByte: Math.min(start, end),
-                endByte: Math.max(start, end),
-                signed: true,
-                decimalPlaces: 0
-            };
-        }
-    } else if ((match = config.match(unsignedWordPattern))) {
-        const start = parseInt(match[1]);
-        const end = parseInt(match[2]);
-        if (start >= 0 && end <= 7 && end - start === 1) {
-            return {
-                type: 'word',
-                startByte: Math.min(start, end),
-                endByte: Math.max(start, end),
-                signed: false,
-                decimalPlaces: 0
-            };
-        }
-    } else if ((match = config.match(floatPattern))) {
-        const start = parseInt(match[1]);
-        const end = parseInt(match[2]);
-        const decimals = match[3] ? parseInt(match[3]) : 2;
-        if (start >= 0 && end <= 7 && end - start === 3) {
-            return {
-                type: 'float',
-                startByte: Math.min(start, end),
-                endByte: Math.max(start, end),
-                signed: true,
-                decimalPlaces: decimals
-            };
-        }
-    }
-
-    return null;
-}
-
-// Calculate value from parsed config
-export function calculateValue(parsedConfig, data) {
-    if (!parsedConfig || !data) return 0;
-
-    let value = 0;
-
-    switch (parsedConfig.type) {
-        case 'byte':
-            if (data.length > parsedConfig.byteIndex) {
-                value = data[parsedConfig.byteIndex];
-                if (parsedConfig.signed && value > 127) {
-                    value = value - 256;
-                }
-            }
-            break;
-        case 'word':
-            if (data.length > parsedConfig.endByte) {
-                const highByte = data[parsedConfig.startByte];
-                const lowByte = data[parsedConfig.endByte];
-                value = (highByte << 8) | lowByte;
-
-                if (parsedConfig.signed && value > 32767) {
-                    value = value - 65536;
-                }
-            }
-            break;
-        case 'float':
-            if (data.length > parsedConfig.endByte) {
-                const buffer = new ArrayBuffer(4);
-                const view = new DataView(buffer);
-                view.setUint8(0, data[parsedConfig.startByte]);
-                view.setUint8(1, data[parsedConfig.startByte + 1]);
-                view.setUint8(2, data[parsedConfig.startByte + 2]);
-                view.setUint8(3, data[parsedConfig.startByte + 3]);
-                value = view.getFloat32(0, false);
-                value = parseFloat(value.toFixed(parsedConfig.decimalPlaces));
-            }
-            break;
-    }
-
-    return value;
+// Generate safe ID for HTML elements
+export function generateSafeId(str) {
+    return str.replace(/[^a-zA-Z0-9-]/g, '-');
 }
 
 // Convert hex string to bytes array
@@ -121,7 +22,10 @@ export function hexToBytes(hex) {
     return bytes;
 }
 
-// Generate safe ID for HTML elements
-export function generateSafeId(str) {
-    return str.replace(/[^a-zA-Z0-9-]/g, '-');
+// Helper to convert hex color to rgba
+export function hexToRgba(hex, alpha = 1) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }

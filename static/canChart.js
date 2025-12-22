@@ -1,9 +1,10 @@
 // Single Chart Widget
-import { MAX_POINTS, hexToBytes, parseByteConfig, calculateValue } from './utils.js';
+import { MAX_POINTS, hexToBytes } from './utils.js';
 
 export const canChartWidget = {
     initChart(widgetId, widget) {
-        const canvasId = `chart-${widgetId.replace(/[^a-zA-Z0-9-]/g, '-')}`;
+        const safeId = widgetId.replace(/[^a-zA-Z0-9-]/g, '-');
+        const canvasId = `chart-${safeId}`;
         const canvas = document.getElementById(canvasId);
         if (!canvas) return;
 
@@ -13,9 +14,11 @@ export const canChartWidget = {
             widget.chart.destroy();
         }
 
-        // Инициализируем данные виджета
         if (!widget.data) {
-            widget.data = { labels: [], values: [] };
+            widget.data = {
+                labels: [],
+                values: []
+            };
         }
 
         widget.chart = new Chart(ctx, {
@@ -51,36 +54,51 @@ export const canChartWidget = {
     },
 
     processFrame(widgetId, frame, widget) {
-        const data = hexToBytes(frame.data);
-        const timestamp = new Date().toLocaleTimeString();
-
-        if (!widget.config?.dataSource) return;
-
-        const parsedConfig = parseByteConfig(widget.config.dataSource);
-        if (!parsedConfig) return;
-
-        const value = calculateValue(parsedConfig, data);
-
-        // Инициализируем данные, если их нет
-        if (!widget.data) {
-            widget.data = { labels: [], values: [] };
+        if (widget.canId !== frame.id.toLowerCase()) {
+            return;
         }
 
-        // Update widget data
+        if (!widget.config) {
+            console.warn('Widget config missing');
+            return;
+        }
+
+        const data = hexToBytes(frame.data);
+        const timestamp = new Date().toLocaleTimeString();
+        const safeId = widgetId.replace(/[^a-zA-Z0-9-]/g, '-');
+
+        if (!widget.data) {
+            widget.data = {
+                labels: [],
+                values: []
+            };
+        }
+
+        // Calculate value (упрощенная версия)
+        const byteIndex = widget.config.byteIndex || 0;
+        let value = 0;
+
+        if (byteIndex < data.length) {
+            value = data[byteIndex];
+            if (widget.config.size === '8') {
+                value = value > 127 ? value - 256 : value;
+            }
+        }
+
+        // Add data point
         widget.data.labels.push(timestamp);
         widget.data.values.push(value);
 
-        // Limit to MAX_POINTS
+        // Limit points
         if (widget.data.labels.length > MAX_POINTS) {
             widget.data.labels.shift();
             widget.data.values.shift();
         }
 
-        // Update last value display
-        const safeId = widgetId.replace(/[^a-zA-Z0-9-]/g, '-');
+        // Update display
         const lastValueElem = document.getElementById(`last-value-${safeId}`);
         if (lastValueElem) {
-            lastValueElem.textContent = value.toFixed(parsedConfig.decimalPlaces);
+            lastValueElem.textContent = value.toFixed(2);
         }
 
         // Update chart
@@ -91,20 +109,16 @@ export const canChartWidget = {
         }
     },
 
-    getConfigFromModal() {
-        const dataSourceInput = document.querySelector('#singleChartConfig .byte-input input');
-        return {
-            dataSource: dataSourceInput ? dataSourceInput.value : '',
-            color: document.getElementById('singleChartColor').value,
-            label: 'Value'
-        };
-    },
-
     render(widgetId, widget) {
         const safeId = widgetId.replace(/[^a-zA-Z0-9-]/g, '-');
+        const widgetName = widget.config?.widgetName || widget.canId;
+        const size = widget.size || 1;
+
         return `
             <div class="widget-header">
-                <div class="widget-title">${widget.canId} - Single Chart</div>
+                <div class="widget-title">${widgetName} 
+                    <span class="widget-size-badge">${size}×</span>
+                </div>
                 <div class="widget-actions">
                     <button class="widget-btn edit">Edit</button>
                     <button class="widget-btn remove">Remove</button>
@@ -120,9 +134,7 @@ export const canChartWidget = {
         `;
     },
 
-    destroy(widgetId, widget) {
-        if (widget && widget.chart) {
-            widget.chart.destroy();
-        }
+    destroy(widgetId) {
+        console.log(`Destroying single chart widget: ${widgetId}`);
     }
 };

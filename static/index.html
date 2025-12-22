@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CAN Bus Analyzer</title>
     <link rel="stylesheet" href="style.css">
-    <!--    <link rel="stylesheet" href="widgets.css">-->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script type="module" src="app.js"></script>
 </head>
@@ -74,79 +73,79 @@
         </div>
     </div>
 
-
-
     <!-- Modal for widget configuration -->
     <div id="widgetModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Widget Configuration</h3>
+                <h3 id="modalTitle">Widget Configuration</h3>
                 <span class="modal-close">&times;</span>
             </div>
             <div class="modal-body">
                 <div class="form-group">
                     <label for="modalWidgetId">Widget ID:</label>
-                    <input type="text" id="modalWidgetId" placeholder="widget-1">
+                    <input type="text" id="modalWidgetId" readonly>
                 </div>
                 <div class="form-group">
-                    <label for="modalCanId">CAN ID (hex):</label>
-                    <input type="text" id="modalCanId" placeholder="0x200">
+                    <label for="modalWidgetName">Widget Name:</label>
+                    <input type="text" id="modalWidgetName" placeholder="Engine Parameters">
                 </div>
                 <div class="form-group">
                     <label for="modalWidgetType">Widget Type:</label>
                     <select id="modalWidgetType">
                         <option value="canChart">Single Chart</option>
-                        <option value="canChart2">Dual Chart</option>
+                        <option value="canChart2">Multi Chart (up to 4 params)</option>
                     </select>
                 </div>
 
-                <!-- Single Chart Configuration -->
-                <div id="singleChartConfig" class="widget-config-section">
+                <!-- Single Chart Configuration (упрощенная) -->
+                <div id="singleChartConfig" class="widget-config-section" style="display: none;">
                     <h4>Single Chart Configuration</h4>
-                    <div class="byte-inputs">
-                        <div class="byte-input">
-                            <label>Data Source 1:</label>
-                            <input type="text" placeholder="0, 0-1, 0-1(U), 0-3(F,2)">
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="singleChartColor">Line Color:</label>
-                        <input type="color" id="singleChartColor" value="#ff6384">
+                    <div id="singleChartParamContainer">
+                        <!-- Single param will be inserted here -->
                     </div>
                 </div>
 
-                <!-- Dual Chart Configuration -->
-                <div id="dualChartConfig" class="widget-config-section" style="display: none;">
-                    <h4>Dual Chart Configuration</h4>
-                    <div class="byte-inputs">
-                        <div class="byte-input">
-                            <label>Data Source 1:</label>
-                            <input type="text" placeholder="0, 0-1, 0-1(U), 0-3(F,2)">
-                        </div>
-                        <div class="byte-input">
-                            <label>Data Source 2:</label>
-                            <input type="text" placeholder="2, 2-3, 2-3(U), 4-7(F,2)">
-                        </div>
+                <!-- Multi Chart Configuration -->
+                <div id="multiChartConfig" class="widget-config-section" style="display: none;">
+                    <div class="config-header">
+                        <h4>Multi Chart Parameters</h4>
+                        <button type="button" id="addParamBtn" class="add-param-btn">
+                            + Add Parameter
+                        </button>
                     </div>
-                    <div class="grid-2">
-                        <div class="form-group">
-                            <label for="dualChartColor1">Line 1 Color:</label>
-                            <input type="color" id="dualChartColor1" value="#ff6384">
+                    <div id="paramContainer">
+                        <!-- Parameter components will be inserted here -->
+                    </div>
+                    <div class="chart-settings">
+                        <h4>Chart Settings</h4>
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label for="chartYMin">Y Min:</label>
+                                <input type="number" id="chartYMin" placeholder="Auto">
+                            </div>
+                            <div class="form-group">
+                                <label for="chartYMax">Y Max:</label>
+                                <input type="number" id="chartYMax" placeholder="Auto">
+                            </div>
                         </div>
                         <div class="form-group">
-                            <label for="dualChartColor2">Line 2 Color:</label>
-                            <input type="color" id="dualChartColor2" value="#36a2eb">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="chartAutoScale" checked>
+                                <span>Auto Scale Y Axis</span>
+                            </label>
                         </div>
                     </div>
                 </div>
 
                 <div class="modal-actions">
-                    <button id="modalSaveBtn" class="save-btn">Save</button>
+                    <button id="modalSaveBtn" class="save-btn">Save Widget</button>
                     <button id="modalCancelBtn" class="cancel-btn">Cancel</button>
                 </div>
             </div>
         </div>
     </div>
+
+
 </div>
 
 </body>
