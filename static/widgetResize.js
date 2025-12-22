@@ -1,163 +1,151 @@
-// Widget resize functionality
-export class WidgetResize {
-    constructor() {
-        this.resizingWidget = null;
-        this.startWidth = 0;
-        this.startX = 0;
-        this.gridSize = 350; // Minimum widget width
-        this.minCols = 1;
-        this.maxCols = 3;
+// Функция для изменения размера виджетов
+export function initWidgetResize(widgetElement, onResize) {
+    if (!widgetElement) return;
 
-        this.init();
-    }
+    // Создаем элемент для изменения размера
+    const resizeHandle = document.createElement('div');
+    resizeHandle.className = 'widget-resize-handle';
+    resizeHandle.innerHTML = '↘';
 
-    init() {
-        // Event delegation for resize handles
-        document.addEventListener('mousedown', (e) => {
-            const resizeHandle = e.target.closest('.widget-resize-handle');
-            if (resizeHandle) {
-                this.startResize(e, resizeHandle.closest('.widget'));
-            }
-        });
+    // Добавляем стили
+    resizeHandle.style.position = 'absolute';
+    resizeHandle.style.bottom = '5px';
+    resizeHandle.style.right = '5px';
+    resizeHandle.style.width = '15px';
+    resizeHandle.style.height = '15px';
+    resizeHandle.style.cursor = 'se-resize';
+    resizeHandle.style.background = '#667eea';
+    resizeHandle.style.color = 'white';
+    resizeHandle.style.fontSize = '10px';
+    resizeHandle.style.textAlign = 'center';
+    resizeHandle.style.lineHeight = '15px';
+    resizeHandle.style.borderRadius = '50%';
+    resizeHandle.style.opacity = '0.7';
+    resizeHandle.style.transition = 'opacity 0.2s';
+    resizeHandle.style.zIndex = '10';
 
-        document.addEventListener('mousemove', (e) => {
-            if (this.resizingWidget) {
-                this.resize(e);
-            }
-        });
+    // Добавляем в виджет
+    widgetElement.appendChild(resizeHandle);
 
-        document.addEventListener('mouseup', () => {
-            if (this.resizingWidget) {
-                this.stopResize();
-            }
-        });
+    // Обработчики событий
+    let isResizing = false;
+    let startX, startWidth;
+    const gridSize = 350; // минимальная ширина из README
+    const maxSize = 3; // максимальный множитель
 
-        // Touch events
-        document.addEventListener('touchstart', (e) => {
-            const resizeHandle = e.target.closest('.widget-resize-handle');
-            if (resizeHandle) {
-                e.preventDefault();
-                this.startResize(e.touches[0], resizeHandle.closest('.widget'));
-            }
-        }, { passive: false });
+    resizeHandle.addEventListener('mouseenter', () => {
+        resizeHandle.style.opacity = '1';
+    });
 
-        document.addEventListener('touchmove', (e) => {
-            if (this.resizingWidget && e.touches.length === 1) {
-                e.preventDefault();
-                this.resize(e.touches[0]);
-            }
-        }, { passive: false });
-
-        document.addEventListener('touchend', () => {
-            if (this.resizingWidget) {
-                this.stopResize();
-            }
-        });
-    }
-
-    startResize(event, widget) {
-        this.resizingWidget = widget;
-        this.startX = event.clientX;
-
-        // Get current span count
-        const currentSpan = this.getCurrentSpan(widget);
-        this.startWidth = currentSpan;
-
-        // Add resizing class
-        widget.classList.add('resizing');
-
-        // Prevent text selection during resize
-        document.body.style.userSelect = 'none';
-        document.body.style.cursor = 'col-resize';
-    }
-
-    resize(event) {
-        if (!this.resizingWidget) return;
-
-        const deltaX = event.clientX - this.startX;
-        const gridUnits = Math.round(deltaX / this.gridSize);
-
-        let newSpan = this.startWidth + gridUnits;
-        newSpan = Math.max(this.minCols, Math.min(this.maxCols, newSpan));
-
-        // Update widget size
-        this.setWidgetSize(this.resizingWidget, newSpan);
-    }
-
-    stopResize() {
-        if (!this.resizingWidget) return;
-
-        // Remove resizing class
-        this.resizingWidget.classList.remove('resizing');
-
-        // Save widget size
-        const widgetId = this.resizingWidget.id.replace('widget-', '');
-        const currentSpan = this.getCurrentSpan(this.resizingWidget);
-        this.saveWidgetSize(widgetId, currentSpan);
-
-        // Reset styles
-        document.body.style.userSelect = '';
-        document.body.style.cursor = '';
-
-        this.resizingWidget = null;
-        this.startWidth = 0;
-        this.startX = 0;
-    }
-
-    getCurrentSpan(widget) {
-        const style = window.getComputedStyle(widget);
-        const gridColumnEnd = style.gridColumnEnd;
-
-        if (gridColumnEnd === 'auto') {
-            return 1;
+    resizeHandle.addEventListener('mouseleave', () => {
+        if (!isResizing) {
+            resizeHandle.style.opacity = '0.7';
         }
+    });
 
-        // Parse span value from grid-column-end
-        const match = gridColumnEnd.match(/span (\d+)/);
-        return match ? parseInt(match[1], 10) : 1;
-    }
+    resizeHandle.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        isResizing = true;
+        startX = e.clientX;
+        startWidth = widgetElement.offsetWidth;
 
-    setWidgetSize(widget, span) {
-        // Remove all size classes
-        widget.classList.remove('widget-size-2', 'widget-size-3');
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
 
-        // Add appropriate size class
-        if (span === 2) {
-            widget.classList.add('widget-size-2');
-        } else if (span === 3) {
-            widget.classList.add('widget-size-3');
-        }
+        widgetElement.classList.add('resizing');
+    });
 
-        // Update badge if exists
-        const badge = widget.querySelector('.widget-size-badge');
+    function onMouseMove(e) {
+        if (!isResizing) return;
+
+        const deltaX = e.clientX - startX;
+        const newWidth = startWidth + deltaX;
+
+        // Привязка к сетке: x1, x2, x3 (350px, 700px, 1050px)
+        const size = Math.max(1, Math.min(maxSize, Math.round(newWidth / gridSize)));
+        const finalWidth = size * gridSize;
+
+        // Обновляем размер
+        widgetElement.style.gridColumn = `span ${size}`;
+
+        // Обновляем бейдж размера
+        const badge = widgetElement.querySelector('.widget-size-badge');
         if (badge) {
-            badge.textContent = `${span}×`;
+            badge.textContent = `${size}×`;
+        }
+
+        // Вызываем callback если нужно
+        if (onResize) {
+            onResize(size);
         }
     }
 
-    saveWidgetSize(widgetId, span) {
-        try {
-            const sizes = JSON.parse(localStorage.getItem('widgetSizes') || '{}');
-            sizes[widgetId] = span;
-            localStorage.setItem('widgetSizes', JSON.stringify(sizes));
-        } catch (e) {
-            console.error('Failed to save widget size:', e);
+    function onMouseUp() {
+        if (!isResizing) return;
+
+        isResizing = false;
+        resizeHandle.style.opacity = '0.7';
+        widgetElement.classList.remove('resizing');
+
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+    }
+
+    // Touch события для мобильных устройств
+    resizeHandle.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        if (e.touches.length === 1) {
+            isResizing = true;
+            startX = e.touches[0].clientX;
+            startWidth = widgetElement.offsetWidth;
+
+            document.addEventListener('touchmove', onTouchMove);
+            document.addEventListener('touchend', onTouchEnd);
+
+            widgetElement.classList.add('resizing');
+        }
+    });
+
+    function onTouchMove(e) {
+        if (!isResizing || e.touches.length !== 1) return;
+
+        const deltaX = e.touches[0].clientX - startX;
+        const newWidth = startWidth + deltaX;
+        const size = Math.max(1, Math.min(maxSize, Math.round(newWidth / gridSize)));
+
+        widgetElement.style.gridColumn = `span ${size}`;
+
+        const badge = widgetElement.querySelector('.widget-size-badge');
+        if (badge) {
+            badge.textContent = `${size}×`;
+        }
+
+        if (onResize) {
+            onResize(size);
         }
     }
 
-    loadWidgetSize(widgetId) {
-        try {
-            const sizes = JSON.parse(localStorage.getItem('widgetSizes') || '{}');
-            return sizes[widgetId] || 1;
-        } catch (e) {
-            console.error('Failed to load widget size:', e);
-            return 1;
-        }
+    function onTouchEnd() {
+        if (!isResizing) return;
+
+        isResizing = false;
+        resizeHandle.style.opacity = '0.7';
+        widgetElement.classList.remove('resizing');
+
+        document.removeEventListener('touchmove', onTouchMove);
+        document.removeEventListener('touchend', onTouchEnd);
     }
 
-    applySavedSize(widget) {
-        const widgetId = widget.id.replace('widget-', '');
-        const savedSize = this.loadWidgetSize(widgetId);
-        this.setWidgetSize(widget, savedSize);
-    }
+    return {
+        destroy: () => {
+            if (resizeHandle.parentNode) {
+                resizeHandle.parentNode.removeChild(resizeHandle);
+            }
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+            document.removeEventListener('touchmove', onTouchMove);
+            document.removeEventListener('touchend', onTouchEnd);
+        }
+    };
 }

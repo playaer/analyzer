@@ -18,14 +18,18 @@ export class WidgetService {
         const safeId = widgetId.replace(/[^a-zA-Z0-9-]/g, '-');
         const element = document.createElement('div');
 
-        element.className = `widget ${this.getWidgetSizeClass(widget.size || 1)}`;
+        element.className = 'widget';
         element.id = `widget-${safeId}`;
 
-        // Add drag handle
+        // Применяем размер если есть
+        if (widget.size && widget.size > 1) {
+            element.classList.add(`widget-size-${widget.size}`);
+        }
+
+        // Добавляем drag handle
         element.innerHTML = `
-            <div class="widget-drag-handle">↔</div>
-            <div class="widget-resize-handle"></div>
-        `;
+        <div class="widget-drag-handle">↔</div>
+    `;
 
         return element;
     }

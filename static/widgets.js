@@ -3,8 +3,8 @@ import { canChartWidget } from './canChart.js';
 import { canChart2Widget } from './canChart2.js';
 import { WidgetService } from './widgetService.js';
 import { WidgetDrag } from './widgetDrag.js';
-import { WidgetResize } from './widgetResize.js';
-import { ParamConfig } from './components/paramConfig.js';
+import { initWidgetResize } from './widgetResize.js';
+import { ParamConfig, createParamElement, checkFrameAgainstParam } from './components/paramConfig.js';
 
 export let widgets = new Map();
 let widgetDrag = null;
@@ -20,7 +20,6 @@ export function initWidgets() {
 
     // Инициализируем drag & drop и resize
     widgetDrag = new WidgetDrag();
-    widgetResize = new WidgetResize();
 }
 
 // Обработка CAN фреймов
@@ -150,14 +149,26 @@ function loadWidgetConfig(widget) {
     if (widget.type === 'canChart2' && widget.config?.params) {
         // Загружаем параметры для multi-chart
         widget.config.params.forEach((paramData, index) => {
-            const param = new ParamConfig(index, paramData);
+            const param = new ParamConfig(index, {
+                name: paramData.name,
+                canId: paramData.canId,
+                byteIndex: paramData.byteIndex,
+                size: paramData.size,
+                color: paramData.color,
+                multiplier: paramData.multiplier,
+                adder: paramData.adder,
+                byte0Filter: paramData.byte0Filter || '',
+                byte1Filter: paramData.byte1Filter || '',
+                byte0Enabled: paramData.byte0Enabled || false,
+                byte1Enabled: paramData.byte1Enabled || false
+            });
             const paramElement = createParamElement(param);
             if (paramContainer) {
                 paramContainer.appendChild(paramElement);
             }
         });
 
-        // Загружаем настройки графика
+        // Загружаем настройки графика (Ymin, Ymax остаются для всего виджета)
         const yMinInput = document.getElementById('chartYMin');
         const yMaxInput = document.getElementById('chartYMax');
         const autoScaleCheckbox = document.getElementById('chartAutoScale');
@@ -167,37 +178,34 @@ function loadWidgetConfig(widget) {
         if (autoScaleCheckbox) {
             autoScaleCheckbox.checked = widget.config.autoScale !== false;
         }
+        // Внутри блока для single-chart:
     } else if (widget.type === 'canChart' && widget.config) {
         // Загружаем параметр для single-chart
         const param = new ParamConfig(0, {
             name: widget.config.label || 'Value',
             canId: widget.canId,
-            byteIndex: 0,
-            size: '8',
-            color: widget.config.color || '#ff6384'
+            byteIndex: widget.config.byteIndex || 0,
+            size: widget.config.size || '8',
+            color: widget.config.color || '#ff6384',
+            multiplier: widget.config.multiplier || 1,
+            adder: widget.config.adder || 0
         });
         const paramElement = createParamElement(param);
         if (singleParamContainer) {
             singleParamContainer.appendChild(paramElement);
         }
+
+        // Загружаем настройки графика для single-chart
+        const yMinInput = document.getElementById('singleChartYMin');
+        const yMaxInput = document.getElementById('singleChartYMax');
+        const autoScaleCheckbox = document.getElementById('singleChartAutoScale');
+
+        if (yMinInput) yMinInput.value = widget.config.yMin || '';
+        if (yMaxInput) yMaxInput.value = widget.config.yMax || '';
+        if (autoScaleCheckbox) {
+            autoScaleCheckbox.checked = widget.config.autoScale !== false;
+        }
     }
-}
-
-// Создание элемента параметра
-function createParamElement(param) {
-    const template = document.createElement('template');
-    template.innerHTML = param.render();
-    const element = template.content.firstElementChild;
-
-    // Добавляем обработчик удаления
-    const removeBtn = element.querySelector('.remove-param-btn');
-    if (removeBtn) {
-        removeBtn.addEventListener('click', () => {
-            element.remove();
-        });
-    }
-
-    return element;
 }
 
 // Добавление нового параметра
@@ -227,6 +235,14 @@ function updateModalForType(type) {
     if (type === 'canChart') {
         singleConfig.style.display = 'block';
         multiConfig.style.display = 'none';
+
+        // Инициализируем параметр для single-chart если его нет
+        const singleParamContainer = document.getElementById('singleChartParamContainer');
+        if (singleParamContainer && singleParamContainer.children.length === 0) {
+            const param = new ParamConfig(0);
+            const paramElement = createParamElement(param);
+            singleParamContainer.appendChild(paramElement);
+        }
     } else {
         singleConfig.style.display = 'none';
         multiConfig.style.display = 'block';
@@ -272,34 +288,22 @@ function saveWidget() {
         widgetName: widgetName,
         enabled: true,
         frameCount: 0,
-        size: 1, // Default size
+        size: 1,
         createdAt: new Date().toISOString(),
         config: {}
     };
 
     // Собираем конфигурацию в зависимости от типа
-    if (widgetType === 'canChart') {
-        const paramElement = document.querySelector('#singleChartParamContainer .param-config');
-        if (paramElement) {
-            const param = new ParamConfig(0);
-            const paramData = param.getDataFromDOM(paramElement);
-
-            widgetConfig.canId = paramData.canId;
-            widgetConfig.config = {
-                label: paramData.name,
-                color: paramData.color,
-                byteIndex: paramData.byteIndex,
-                size: paramData.size
-            };
-        }
-    } else if (widgetType === 'canChart2') {
+    if (widgetType === 'canChart2') {
         // Собираем параметры
         const paramElements = document.querySelectorAll('#paramContainer .param-config');
         const params = [];
 
-        paramElements.forEach((element, index) => {
-            const param = new ParamConfig(index);
-            params.push(param.getDataFromDOM(element));
+        paramElements.forEach((element) => {
+            const param = new ParamConfig(0);
+            const paramData = param.getDataFromDOM(element);
+            // Не включаем yMin и yMax в данные параметра
+            params.push(paramData);
         });
 
         if (params.length === 0) {
@@ -307,7 +311,7 @@ function saveWidget() {
             return;
         }
 
-        // Собираем настройки графика
+        // Собираем настройки графика (Ymin, Ymax - для всего виджета)
         const yMinInput = document.getElementById('chartYMin');
         const yMaxInput = document.getElementById('chartYMax');
         const autoScaleCheckbox = document.getElementById('chartAutoScale');
@@ -322,6 +326,30 @@ function saveWidget() {
 
         // Для multi-chart используем первый CAN ID для обратной совместимости
         widgetConfig.canId = params[0].canId;
+    } else if (widgetType === 'canChart') {
+        const paramElement = document.querySelector('#singleChartParamContainer .param-config');
+        if (paramElement) {
+            const param = new ParamConfig(0);
+            const paramData = param.getDataFromDOM(paramElement);
+
+            // Получаем настройки графика для single-chart
+            const yMinInput = document.getElementById('singleChartYMin');
+            const yMaxInput = document.getElementById('singleChartYMax');
+            const autoScaleCheckbox = document.getElementById('singleChartAutoScale');
+
+            widgetConfig.canId = paramData.canId;
+            widgetConfig.config = {
+                label: paramData.name,
+                color: paramData.color,
+                byteIndex: paramData.byteIndex,
+                size: paramData.size,
+                multiplier: paramData.multiplier,
+                adder: paramData.adder,
+                yMin: yMinInput?.value || '',
+                yMax: yMaxInput?.value || '',
+                autoScale: autoScaleCheckbox?.checked !== false
+            };
+        }
     }
 
     // Сохраняем виджет
@@ -335,7 +363,6 @@ function saveWidget() {
     console.log('Widget saved:', widgetConfig);
 }
 
-// Рендеринг виджетов
 export function renderWidgets() {
     const container = document.getElementById('widgetsContainer');
     if (!container) return;
@@ -367,14 +394,38 @@ export function renderWidgets() {
         if (removeBtn) removeBtn.addEventListener('click', () => removeWidget(widgetId));
 
         // Применяем сохраненный размер
-        if (widgetResize) {
-            widgetResize.applySavedSize(widgetElement);
+        if (widget.size && widget.size > 1) {
+            widgetElement.style.gridColumn = `span ${widget.size}`;
+            const badge = widgetElement.querySelector('.widget-size-badge');
+            if (badge) {
+                badge.textContent = `${widget.size}×`;
+            }
         }
 
-        // Обновляем бейдж размера
-        WidgetService.updateWidgetBadge(widgetElement, widget);
-
         container.appendChild(widgetElement);
+
+        // Инициализируем изменение размера
+        widget.resizeHandler = initWidgetResize(widgetElement, (newSize) => {
+            // Обновляем размер в конфигурации
+            widget.size = newSize;
+
+            // Обновляем бейдж
+            const badge = widgetElement.querySelector('.widget-size-badge');
+            if (badge) {
+                badge.textContent = `${newSize}×`;
+            }
+
+            // Сохраняем конфигурацию
+            saveWidgetsToStorage();
+
+            // Перерисовываем графики после изменения размера
+            setTimeout(() => {
+                if (widget.chart) {
+                    widget.chart.resize();
+                    widget.chart.update('none');
+                }
+            }, 100);
+        });
 
         // Инициализируем график
         setTimeout(() => {
@@ -413,12 +464,16 @@ function updateFrameCount(widgetId, count) {
     }
 }
 
-// Удаление виджета
 function removeWidget(widgetId) {
     if (!confirm('Remove this widget?')) return;
 
     const widget = widgets.get(widgetId);
     if (widget) {
+        // Очищаем resize handler
+        if (widget.resizeHandler) {
+            widget.resizeHandler.destroy();
+        }
+
         // Очищаем ресурсы графика
         switch (widget.type) {
             case 'canChart':
@@ -455,3 +510,4 @@ function loadWidgetsFromStorage() {
 function saveWidgetsToStorage() {
     WidgetService.saveWidgetConfig(widgets);
 }
+

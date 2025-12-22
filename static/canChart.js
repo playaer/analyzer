@@ -1,5 +1,6 @@
 // Single Chart Widget
 import { MAX_POINTS, hexToBytes } from './utils.js';
+import { checkFrameAgainstParam } from './components/paramConfig.js';
 
 export const canChartWidget = {
     initChart(widgetId, widget) {
@@ -46,7 +47,12 @@ export const canChartWidget = {
                     y: {
                         display: true,
                         beginAtZero: false,
-                        grid: { color: 'rgba(0, 0, 0, 0.1)' }
+                        grid: { color: 'rgba(0, 0, 0, 0.1)' },
+                        ticks: {
+                            callback: function(value) {
+                                return parseFloat(value).toFixed(2);
+                            }
+                        }
                     }
                 }
             }
@@ -54,7 +60,10 @@ export const canChartWidget = {
     },
 
     processFrame(widgetId, frame, widget) {
-        if (widget.canId !== frame.id.toLowerCase()) {
+        // Проверяем фильтры для этого виджета
+        const passesFilter = this.checkWidgetFilters(frame, widget);
+
+        if (!passesFilter) {
             return;
         }
 
@@ -74,7 +83,7 @@ export const canChartWidget = {
             };
         }
 
-        // Calculate value (упрощенная версия)
+        // Calculate value
         const byteIndex = widget.config.byteIndex || 0;
         let value = 0;
 
@@ -83,6 +92,14 @@ export const canChartWidget = {
             if (widget.config.size === '8') {
                 value = value > 127 ? value - 256 : value;
             }
+        }
+
+        // Apply formula if exists
+        if (widget.config.multiplier !== undefined) {
+            value = value * (widget.config.multiplier || 1);
+        }
+        if (widget.config.adder !== undefined) {
+            value = value + (widget.config.adder || 0);
         }
 
         // Add data point
@@ -107,6 +124,40 @@ export const canChartWidget = {
             widget.chart.data.datasets[0].data = widget.data.values;
             widget.chart.update('none');
         }
+    },
+
+    // Проверка фильтров для виджета
+    checkWidgetFilters(frame, widget) {
+        // Проверка CAN ID
+        if (widget.canId.toLowerCase() !== frame.id.toLowerCase()) {
+            return false;
+        }
+
+        // Если фильтры по байтам не включены, достаточно совпадения CAN ID
+        if (!widget.config.byte0Enabled && !widget.config.byte1Enabled) {
+            return true;
+        }
+
+        // Конвертируем данные фрейма в байты
+        const data = hexToBytes(frame.data);
+
+        // Проверка байта 0
+        if (widget.config.byte0Enabled && widget.config.byte0Filter) {
+            const filterValue = parseInt(widget.config.byte0Filter, 16);
+            if (data.length === 0 || data[0] !== filterValue) {
+                return false;
+            }
+        }
+
+        // Проверка байта 1
+        if (widget.config.byte1Enabled && widget.config.byte1Filter) {
+            const filterValue = parseInt(widget.config.byte1Filter, 16);
+            if (data.length < 2 || data[1] !== filterValue) {
+                return false;
+            }
+        }
+
+        return true;
     },
 
     render(widgetId, widget) {
