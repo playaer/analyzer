@@ -22,66 +22,66 @@ export class ParamConfig {
     // Генерация HTML для конфигурации параметра
     render() {
         return `
-            <div class="param-config" data-param-index="${this.paramIndex}">
-                <div class="param-header">
-                    <strong>Parameter ${this.paramIndex + 1}</strong>
-                    <button type="button" class="remove-param-btn">×</button>
+        <div class="param-config" data-param-index="${this.paramIndex}">
+            <div class="param-header">
+                <strong>Param ${this.paramIndex + 1}</strong>
+                <button type="button" class="remove-param-btn">×</button>
+            </div>
+            
+            <div class="form-group">
+                <label for="param-name-${this.paramIndex}">Name:</label>
+                <input type="text" id="param-name-${this.paramIndex}" class="param-name" 
+                       value="${this.config.name}" placeholder="Parameter name">
+            </div>
+            
+            <!-- Компонент фильтрации -->
+            <div id="byte-filter-${this.paramIndex}" class="byte-filter-container"></div>
+            
+            <div class="grid-2" style="gap: 8px; margin-bottom: 10px;">
+                <div class="form-group">
+                    <label for="param-byte-${this.paramIndex}">Byte Index (0-7):</label>
+                    <input type="number" id="param-byte-${this.paramIndex}" class="param-byte" 
+                           min="0" max="7" value="${this.config.byteIndex}">
+                    <small style="color: #666; font-size: 0.7em;">Byte to extract</small>
                 </div>
                 
                 <div class="form-group">
-                    <label for="param-name-${this.paramIndex}">Parameter Name:</label>
-                    <input type="text" id="param-name-${this.paramIndex}" class="param-name" 
-                           value="${this.config.name}" placeholder="Parameter name">
-                </div>
-                
-                <!-- Вставляем компонент фильтрации -->
-                <div id="byte-filter-${this.paramIndex}" class="byte-filter-container"></div>
-                
-                <div class="grid-2" style="gap: 10px; margin-bottom: 15px;">
-                    <div class="form-group">
-                        <label for="param-byte-${this.paramIndex}">Data Byte Index (0-7):</label>
-                        <input type="number" id="param-byte-${this.paramIndex}" class="param-byte" 
-                               min="0" max="7" value="${this.config.byteIndex}">
-                        <small style="color: #666; font-size: 0.85em;">Which byte to extract value from</small>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="param-size-${this.paramIndex}">Data Size:</label>
-                        <select id="param-size-${this.paramIndex}" class="param-size">
-                            <option value="8" ${this.config.size === '8' ? 'selected' : ''}>8-bit signed</option>
-                            <option value="8u" ${this.config.size === '8u' ? 'selected' : ''}>8-bit unsigned</option>
-                            <option value="16" ${this.config.size === '16' ? 'selected' : ''}>16-bit signed</option>
-                            <option value="16u" ${this.config.size === '16u' ? 'selected' : ''}>16-bit unsigned</option>
-                            <option value="32" ${this.config.size === '32' ? 'selected' : ''}>32-bit signed</option>
-                            <option value="32u" ${this.config.size === '32u' ? 'selected' : ''}>32-bit unsigned</option>
-                            <option value="32f" ${this.config.size === '32f' ? 'selected' : ''}>32-bit float</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="param-color-${this.paramIndex}">Line Color:</label>
-                    <input type="color" id="param-color-${this.paramIndex}" class="param-color" 
-                           value="${this.config.color}">
-                </div>
-                
-                <div class="grid-2" style="gap: 10px; margin: 15px 0;">
-                    <div class="form-group">
-                        <label for="param-multiplier-${this.paramIndex}">Multiplier (input1):</label>
-                        <input type="number" id="param-multiplier-${this.paramIndex}" class="param-multiplier" 
-                               step="0.01" value="${this.config.multiplier}">
-                        <small style="color: #666; font-size: 0.85em;">Value × multiplier</small>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="param-adder-${this.paramIndex}">Adder (input2):</label>
-                        <input type="number" id="param-adder-${this.paramIndex}" class="param-adder" 
-                               step="0.01" value="${this.config.adder}">
-                        <small style="color: #666; font-size: 0.85em;">Value + adder</small>
-                    </div>
+                    <label for="param-size-${this.paramIndex}">Data Size:</label>
+                    <select id="param-size-${this.paramIndex}" class="param-size">
+                        <option value="8" ${this.config.size === '8' ? 'selected' : ''}>8-bit signed</option>
+                        <option value="8u" ${this.config.size === '8u' ? 'selected' : ''}>8-bit unsigned</option>
+                        <option value="16" ${this.config.size === '16' ? 'selected' : ''}>16-bit signed</option>
+                        <option value="16u" ${this.config.size === '16u' ? 'selected' : ''}>16-bit unsigned</option>
+                        <option value="32" ${this.config.size === '32' ? 'selected' : ''}>32-bit signed</option>
+                        <option value="32u" ${this.config.size === '32u' ? 'selected' : ''}>32-bit unsigned</option>
+                        <option value="32f" ${this.config.size === '32f' ? 'selected' : ''}>32-bit float</option>
+                    </select>
                 </div>
             </div>
-        `;
+            
+            <div class="form-group">
+                <label for="param-color-${this.paramIndex}">Color:</label>
+                <input type="color" id="param-color-${this.paramIndex}" class="param-color" 
+                       value="${this.config.color}">
+            </div>
+            
+            <div class="grid-2" style="gap: 8px; margin: 10px 0;">
+                <div class="form-group">
+                    <label for="param-multiplier-${this.paramIndex}">Multiplier:</label>
+                    <input type="number" id="param-multiplier-${this.paramIndex}" class="param-multiplier" 
+                           step="0.01" value="${this.config.multiplier}">
+                    <small style="color: #666; font-size: 0.7em;">Value × multiplier</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="param-adder-${this.paramIndex}">Adder:</label>
+                    <input type="number" id="param-adder-${this.paramIndex}" class="param-adder" 
+                           step="0.01" value="${this.config.adder}">
+                    <small style="color: #666; font-size: 0.7em;">Value + adder</small>
+                </div>
+            </div>
+        </div>
+    `;
     }
 
     // Получение данных конфигурации из DOM

@@ -16,6 +16,7 @@ export function initWidgets() {
     console.log('Widgets module initialized');
     loadWidgetsFromStorage();
     renderWidgets();
+    setupModalEvents();
 
     // Инициализируем drag & drop и resize
     widgetDrag = new WidgetDrag();
@@ -59,10 +60,52 @@ export function processCANFrameForWidgets(frame) {
     });
 }
 
-// Добавляем обработчик для кнопки добавления numeric параметра
-const addNumericParamBtn = document.getElementById('addNumericParamBtn');
-if (addNumericParamBtn) {
-    addNumericParamBtn.addEventListener('click', () => addNumericParamComponent());
+
+// Настройка модального окна
+function setupModalEvents() {
+    const modal = document.getElementById('widgetModal');
+    const addBtn = document.getElementById('addWidgetBtn');
+    const closeBtn = document.querySelector('.modal-close');
+    const cancelBtn = document.getElementById('modalCancelBtn');
+    const saveBtn = document.getElementById('modalSaveBtn');
+    const widgetTypeSelect = document.getElementById('modalWidgetType');
+    const addParamBtn = document.getElementById('addParamBtn');
+    const addNumericParamBtn = document.getElementById('addNumericParamBtn');
+    if (addNumericParamBtn) {
+        addNumericParamBtn.addEventListener('click', () => addNumericParamComponent());
+    }
+
+    // Кнопка добавления виджета
+    if (addBtn) {
+        addBtn.addEventListener('click', () => openModal());
+    }
+
+    // Закрытие модального окна
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+
+    // Изменение типа виджета
+    if (widgetTypeSelect) {
+        widgetTypeSelect.addEventListener('change', (e) => {
+            const type = e.target.value;
+            updateModalForType(type);
+        });
+    }
+
+    // Добавление параметра
+    if (addParamBtn) {
+        addParamBtn.addEventListener('click', () => addParamComponent());
+    }
+
+    // Сохранение виджета
+    if (saveBtn) saveBtn.addEventListener('click', saveWidget);
+
+    // Закрытие по клику вне окна
+    window.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
 }
 
 // Открытие модального окна
@@ -188,7 +231,7 @@ function addParamComponent() {
 function updateModalForType(type) {
     const singleConfig = document.getElementById('singleChartConfig');
     const multiConfig = document.getElementById('multiChartConfig');
-    const numericConfig = document.getElementById('numericConfig');
+    const numericConfig = document.getElementById('numericConfig'); // Теперь этот элемент существует
     const addParamBtn = document.getElementById('addParamBtn');
     const addNumericParamBtn = document.getElementById('addNumericParamBtn');
 
@@ -207,7 +250,7 @@ function updateModalForType(type) {
             addParamComponent();
         }
     } else if (type === 'numeric') {
-        numericConfig.style.display = 'block';
+        numericConfig.style.display = 'block'; // Теперь numericConfig существует
 
         // Инициализируем параметры для numeric widget если их нет
         const numericParamContainer = document.getElementById('numericParamContainer');
@@ -222,12 +265,14 @@ function updateModalForType(type) {
 function resetModalConfig() {
     const paramContainer = document.getElementById('paramContainer');
     const singleParamContainer = document.getElementById('singleChartParamContainer');
+    const numericParamContainer = document.getElementById('numericParamContainer'); // Добавлено
     const yMinInput = document.getElementById('chartYMin');
     const yMaxInput = document.getElementById('chartYMax');
     const autoScaleCheckbox = document.getElementById('chartAutoScale');
 
     if (paramContainer) paramContainer.innerHTML = '';
     if (singleParamContainer) singleParamContainer.innerHTML = '';
+    if (numericParamContainer) numericParamContainer.innerHTML = ''; // Добавлено
     if (yMinInput) yMinInput.value = '';
     if (yMaxInput) yMaxInput.value = '';
     if (autoScaleCheckbox) autoScaleCheckbox.checked = true;
@@ -388,6 +433,20 @@ export function renderWidgets() {
             }, 100);
         });
 
+        widgetElement.addEventListener('resize', () => {
+            updateNumericGridLayout(widgetElement);
+        });
+
+// Инициализируем layout при загрузке
+        window.addEventListener('resize', () => {
+            widgets.forEach((widget, widgetId) => {
+                const widgetElement = document.getElementById(`widget-${widgetId.replace(/[^a-zA-Z0-9-]/g, '-')}`);
+                if (widgetElement && widget.type === 'numeric') {
+                    updateNumericGridLayout(widgetElement);
+                }
+            });
+        });
+
         // Инициализируем виджет
         setTimeout(() => {
             switch (widget.type) {
@@ -490,3 +549,30 @@ function addNumericParamComponent() {
     paramContainer.appendChild(paramElement);
 }
 
+function initWidgetChart(widgetId, widget) {
+    setTimeout(() => {
+        switch (widget.type) {
+            case 'numeric':
+                numericWidget.initWidget(widgetId, widget);
+                break;
+            case 'canChart2':
+                canChart2Widget.initChart(widgetId, widget);
+                break;
+        }
+    }, 100);
+}
+
+function updateNumericGridLayout(widgetElement) {
+    const numericGrid = widgetElement.querySelector('.numeric-grid');
+    if (!numericGrid) return;
+
+    const widgetWidth = widgetElement.offsetWidth;
+
+    // Если виджет маленький (1 колонка) - показываем 1 колонку параметров
+    if (widgetWidth < 400) {
+        numericGrid.style.gridTemplateColumns = '1fr';
+    } else {
+        // Если виджет большой - показываем 2 колонки параметров
+        numericGrid.style.gridTemplateColumns = 'repeat(2, 1fr)';
+    }
+}

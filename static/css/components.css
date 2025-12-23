@@ -573,3 +573,108 @@ button {
         font-size: 1.5em;
     }
 }
+
+@media (max-width: 768px) {
+    .numeric-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .numeric-value {
+        font-size: 1.8em;
+    }
+}
+
+@media (max-width: 480px) {
+    .numeric-block {
+        padding: 10px;
+    }
+
+    .numeric-value {
+        font-size: 1.5em;
+    }
+}
+
+/* components.css - добавляем/изменяем следующие стили */
+
+/* Уменьшаем блоки для отображения 4 параметров */
+.numeric-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* 2 колонки */
+    gap: 8px; /* Уменьшаем отступы */
+    height: 100%;
+}
+
+.numeric-block {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.3s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    min-height: 100px;
+}
+
+.numeric-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 4px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #eee;
+    min-height: 32px;
+}
+
+.numeric-name {
+    font-weight: bold;
+    color: #333;
+    font-size: 0.75em;
+    flex-grow: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: normal;
+    line-height: 1.2;
+    max-height: 2.4em;
+}
+
+.numeric-can-id {
+    background: #667eea;
+    color: white;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 0.65em;
+    font-family: monospace;
+    flex-shrink: 0;
+    margin-left: 3px;
+}
+
+.numeric-value-container {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+}
+
+.numeric-value {
+    font-size: 1em;
+    font-weight: bold;
+    font-family: 'Courier New', monospace;
+    text-align: center;
+    transition: color 0.3s ease;
+    word-break: break-all;
+}
+
+.numeric-footer {
+    margin-top: 4px;
+    padding-top: 4px;
+    border-top: 1px solid #eee;
+    text-align: center;
+}
+
+.numeric-timestamp {
+    font-size: 0.65em;
+    color: #666;
+    font-family: monospace;
+}
