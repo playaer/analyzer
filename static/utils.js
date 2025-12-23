@@ -1,5 +1,5 @@
 // Utility functions
-export const MAX_POINTS = 50;
+export const MAX_POINTS = 150;
 
 // Generate unique widget ID
 export function generateWidgetId() {

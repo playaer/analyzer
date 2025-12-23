@@ -1,6 +1,5 @@
 // Multi Chart Widget (up to 4 parameters)
 import { MAX_POINTS, hexToBytes } from './utils.js';
-import { WidgetService } from './widgetService.js';
 
 export const canChart2Widget = {
     initChart(widgetId, widget) {
@@ -11,12 +10,10 @@ export const canChart2Widget = {
 
         const ctx = canvas.getContext('2d');
 
-        // Destroy old chart if exists
         if (widget.chart) {
             widget.chart.destroy();
         }
 
-        // Initialize data structure
         if (!widget.data) {
             widget.data = {
                 labels: [],
@@ -29,13 +26,9 @@ export const canChart2Widget = {
             }
         }
 
-        // Prepare datasets for Chart.js
         const datasets = this.prepareDatasets(widget);
-
-        // Get Y axis limits
         const yAxisConfig = this.getYAxisConfig(widget);
 
-        // Create chart
         widget.chart = new Chart(ctx, {
             type: 'line',
             data: {
@@ -122,12 +115,10 @@ export const canChart2Widget = {
             return { beginAtZero: false };
         }
 
-        // Check if auto scale is enabled
         if (widget.config.autoScale !== false) {
             return { beginAtZero: false };
         }
 
-        // Use manual limits
         const min = widget.config.yMin !== undefined && widget.config.yMin !== ''
             ? parseFloat(widget.config.yMin)
             : undefined;
@@ -156,7 +147,6 @@ export const canChart2Widget = {
         const timestamp = new Date().toLocaleTimeString();
         const safeId = widgetId.replace(/[^a-zA-Z0-9-]/g, '-');
 
-        // Initialize data structure if needed
         if (!widget.data) {
             widget.data = {
                 labels: [],
@@ -167,27 +157,19 @@ export const canChart2Widget = {
             });
         }
 
-        // Add timestamp
         widget.data.labels.push(timestamp);
 
-        // Process each parameter
         widget.config.params.forEach((param, paramIndex) => {
-            // Проверяем фильтры для этого параметра
             const passesFilter = this.checkParamFilters(param, frame);
 
             if (!passesFilter) {
-                // Этот параметр не проходит фильтрацию, добавляем null
                 widget.data.datasets[param.name].push(null);
                 return;
             }
 
-            // Calculate value based on parameter configuration
             const value = this.calculateParamValue(param, data);
-
-            // Add value to dataset
             widget.data.datasets[param.name].push(value);
 
-            // Update last value display
             const lastValueElem = document.getElementById(`last-value-${safeId}-${paramIndex}`);
             if (lastValueElem) {
                 const decimalPlaces = param.size === '32f' ? 4 :
@@ -197,7 +179,6 @@ export const canChart2Widget = {
             }
         });
 
-        // Limit data points
         if (widget.data.labels.length > MAX_POINTS) {
             widget.data.labels.shift();
             Object.keys(widget.data.datasets).forEach(key => {
@@ -205,19 +186,15 @@ export const canChart2Widget = {
             });
         }
 
-        // Update chart if exists
         if (widget.chart) {
-            // Update labels
             widget.chart.data.labels = widget.data.labels;
 
-            // Update datasets
             widget.config.params.forEach((param, index) => {
                 if (widget.chart.data.datasets[index]) {
                     widget.chart.data.datasets[index].data = widget.data.datasets[param.name];
                 }
             });
 
-            // Update Y axis if needed
             if (widget.config.autoScale === false &&
                 (widget.config.yMin !== undefined || widget.config.yMax !== undefined)) {
                 widget.chart.options.scales.y.suggestedMin = widget.config.yMin || undefined;
@@ -228,31 +205,24 @@ export const canChart2Widget = {
         }
     },
 
-// Новая функция для проверки фильтров параметра
     checkParamFilters(param, frame) {
         // Проверка CAN ID
         if (param.canId.toLowerCase() !== frame.id.toLowerCase()) {
             return false;
         }
 
-        // Если фильтры по байтам не включены, достаточно совпадения CAN ID
-        if (!param.byte0Enabled && !param.byte1Enabled) {
-            return true;
-        }
-
-        // Конвертируем данные фрейма в байты
         const data = this.hexToBytes(frame.data);
 
-        // Проверка байта 0
-        if (param.byte0Enabled && param.byte0Filter) {
+        // Проверка байта 0 (если указан фильтр)
+        if (param.byte0Filter && param.byte0Filter.trim() !== '') {
             const filterValue = parseInt(param.byte0Filter, 16);
             if (data.length === 0 || data[0] !== filterValue) {
                 return false;
             }
         }
 
-        // Проверка байта 1
-        if (param.byte1Enabled && param.byte1Filter) {
+        // Проверка байта 1 (если указан фильтр)
+        if (param.byte1Filter && param.byte1Filter.trim() !== '') {
             const filterValue = parseInt(param.byte1Filter, 16);
             if (data.length < 2 || data[1] !== filterValue) {
                 return false;
@@ -262,7 +232,6 @@ export const canChart2Widget = {
         return true;
     },
 
-// Добавляем вспомогательную функцию hexToBytes если ее нет
     hexToBytes(hex) {
         const bytes = [];
         for (let i = 0; i < hex.length; i += 2) {
@@ -271,7 +240,6 @@ export const canChart2Widget = {
         return bytes;
     },
 
-// В функции calculateParamValue заменяем:
     calculateParamValue(param, canData) {
         const byteIndex = param.byteIndex;
         const size = param.size || '8';
@@ -335,10 +303,8 @@ export const canChart2Widget = {
                 rawValue = 0;
         }
 
-        // Применяем формулу: value = (rawValue * multiplier) + adder
         const result = (rawValue * multiplier) + adder;
 
-        // Форматируем результат в зависимости от типа данных
         if (size === '32f') {
             return parseFloat(result.toFixed(4));
         }
@@ -394,7 +360,6 @@ export const canChart2Widget = {
     },
 
     destroy(widgetId) {
-        // Chart destruction is handled in the main module
         console.log(`Destroying multi chart widget: ${widgetId}`);
     }
 };

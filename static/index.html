@@ -81,45 +81,40 @@
                 <span class="modal-close">&times;</span>
             </div>
             <div class="modal-body">
-                <div class="form-group">
-                    <label for="modalWidgetId">Widget ID:</label>
-                    <input type="text" id="modalWidgetId" readonly>
-                </div>
-                <div class="form-group">
-                    <label for="modalWidgetName">Widget Name:</label>
-                    <input type="text" id="modalWidgetName" placeholder="Engine Parameters">
-                </div>
-                <div class="form-group">
-                    <label for="modalWidgetType">Widget Type:</label>
-                    <select id="modalWidgetType">
-                        <option value="numeric">Numeric Values (up to 4 params)</option>
-                        <option value="canChart2">Multi Chart (up to 4 params)</option>
-                    </select>
+                <!-- Скрытое поле для widgetId -->
+                <input type="hidden" id="modalWidgetId" value="">
+
+                <!-- Widget Name и Type в одной строке -->
+                <div class="modal-grid-2">
+                    <div class="form-group">
+                        <label for="modalWidgetName">Widget Name:</label>
+                        <input type="text" id="modalWidgetName" placeholder="Engine Parameters">
+                    </div>
+                    <div class="form-group">
+                        <label for="modalWidgetType">Widget Type:</label>
+                        <select id="modalWidgetType">
+                            <option value="numeric">Numeric Values (up to 4 params)</option>
+                            <option value="canChart2">Multi Chart (up to 4 params)</option>
+                        </select>
+                    </div>
                 </div>
 
-                <!-- Single Chart Configuration (упрощенная) -->
-                <!-- Single Chart Configuration -->
-                <div id="singleChartConfig" class="widget-config-section" style="display: none;">
-                    <h4>Single Chart Configuration</h4>
-                    <div id="singleChartParamContainer">
-                        <!-- Single param will be inserted here -->
-                    </div>
-                    <div class="chart-settings">
-                        <h4>Chart Settings</h4>
-                        <div class="grid-2">
-                            <div class="form-group">
-                                <label for="singleChartYMin">Y Min:</label>
-                                <input type="number" id="singleChartYMin" placeholder="Auto">
-                            </div>
-                            <div class="form-group">
-                                <label for="singleChartYMax">Y Max:</label>
-                                <input type="number" id="singleChartYMax" placeholder="Auto">
-                            </div>
+                <!-- Chart Settings для Multi Chart -->
+                <div id="chartSettings" class="widget-config-section" style="display: none;">
+                    <h4>Chart Settings</h4>
+                    <div class="modal-grid-3">
+                        <div class="form-group">
+                            <label for="chartYMin">Y Min:</label>
+                            <input type="number" id="chartYMin" placeholder="Auto">
                         </div>
                         <div class="form-group">
+                            <label for="chartYMax">Y Max:</label>
+                            <input type="number" id="chartYMax" placeholder="Auto">
+                        </div>
+                        <div class="form-group auto-scale">
                             <label class="checkbox-label">
-                                <input type="checkbox" id="singleChartAutoScale" checked>
-                                <span>Auto Scale Y Axis</span>
+                                <input type="checkbox" id="chartAutoScale" checked>
+                                <span>Auto Scale</span>
                             </label>
                         </div>
                     </div>
@@ -135,25 +130,6 @@
                     </div>
                     <div id="paramContainer">
                         <!-- Parameter components will be inserted here -->
-                    </div>
-                    <div class="chart-settings">
-                        <h4>Chart Settings</h4>
-                        <div class="grid-2">
-                            <div class="form-group">
-                                <label for="chartYMin">Y Min:</label>
-                                <input type="number" id="chartYMin" placeholder="Auto">
-                            </div>
-                            <div class="form-group">
-                                <label for="chartYMax">Y Max:</label>
-                                <input type="number" id="chartYMax" placeholder="Auto">
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="chartAutoScale" checked>
-                                <span>Auto Scale Y Axis</span>
-                            </label>
-                        </div>
                     </div>
                 </div>
 
@@ -180,4 +156,3 @@
 </div>
 </body>
 </html>
-[file content end]

@@ -1,13 +1,10 @@
 // Numeric Widget - отображение числовых значений в блоках
 import { hexToBytes } from './utils.js';
-import { checkFrameAgainstParam } from './components/paramConfig.js';
 
 export const numericWidget = {
-    // Инициализация виджета
     initWidget(widgetId, widget) {
         const safeId = widgetId.replace(/[^a-zA-Z0-9-]/g, '-');
 
-        // Инициализируем структуру данных для хранения последних значений
         if (!widget.data) {
             widget.data = {};
             if (widget.config?.params) {
@@ -21,11 +18,9 @@ export const numericWidget = {
             }
         }
 
-        // Обновляем отображение
         this.updateDisplay(widgetId, widget);
     },
 
-    // Обработка CAN фрейма
     processFrame(widgetId, frame, widget) {
         if (!widget.config || !widget.config.params || widget.config.params.length === 0) {
             return;
@@ -34,35 +29,24 @@ export const numericWidget = {
         const data = hexToBytes(frame.data);
         const safeId = widgetId.replace(/[^a-zA-Z0-9-]/g, '-');
 
-        // Initialize data structure if needed
         if (!widget.data) {
             widget.data = {};
         }
 
-        // Увеличиваем счетчик фреймов
         widget.frameCount = (widget.frameCount || 0) + 1;
         this.updateFrameCount(widgetId, widget.frameCount);
 
-        // Process each parameter
         widget.config.params.forEach((param, paramIndex) => {
-            // Проверяем фильтры для этого параметра
             const passesFilter = this.checkParamFilters(param, frame);
 
             if (!passesFilter) {
-                // Этот параметр не проходит фильтрацию, пропускаем
                 return;
             }
 
-            // Calculate value based on parameter configuration
             const rawValue = this.calculateParamValue(param, data);
-
-            // Apply formula: value = (rawValue * multiplier) + adder
             const value = (rawValue * (param.multiplier || 1)) + (param.adder || 0);
-
-            // Форматируем значение
             const formattedValue = this.formatValue(value, param);
 
-            // Сохраняем данные
             if (!widget.data[param.name]) {
                 widget.data[param.name] = {};
             }
@@ -74,36 +58,28 @@ export const numericWidget = {
                 rawValue: rawValue
             };
 
-            // Update display
             this.updateParamDisplay(widgetId, paramIndex, param, widget.data[param.name]);
         });
     },
 
-    // Проверка фильтров параметра
     checkParamFilters(param, frame) {
         // Проверка CAN ID
         if (param.canId.toLowerCase() !== frame.id.toLowerCase()) {
             return false;
         }
 
-        // Если фильтры по байтам не включены, достаточно совпадения CAN ID
-        if (!param.byte0Enabled && !param.byte1Enabled) {
-            return true;
-        }
-
-        // Конвертируем данные фрейма в байты
         const data = this.hexToBytes(frame.data);
 
-        // Проверка байта 0
-        if (param.byte0Enabled && param.byte0Filter) {
+        // Проверка байта 0 (если указан фильтр)
+        if (param.byte0Filter && param.byte0Filter.trim() !== '') {
             const filterValue = parseInt(param.byte0Filter, 16);
             if (data.length === 0 || data[0] !== filterValue) {
                 return false;
             }
         }
 
-        // Проверка байта 1
-        if (param.byte1Enabled && param.byte1Filter) {
+        // Проверка байта 1 (если указан фильтр)
+        if (param.byte1Filter && param.byte1Filter.trim() !== '') {
             const filterValue = parseInt(param.byte1Filter, 16);
             if (data.length < 2 || data[1] !== filterValue) {
                 return false;
@@ -113,7 +89,6 @@ export const numericWidget = {
         return true;
     },
 
-    // Вычисление значения из байтов
     calculateParamValue(param, canData) {
         const byteIndex = param.byteIndex;
         const size = param.size || '8';
@@ -167,23 +142,18 @@ export const numericWidget = {
         }
     },
 
-    // Форматирование значения
     formatValue(value, param) {
         const size = param.size || '8';
 
         if (size === '32f') {
-            // Для float показываем 4 знака после запятой
             return value.toFixed(4);
         } else if (size.includes('32') || size.includes('16')) {
-            // Для 16/32 битных целых показываем без дробной части
             return Math.round(value).toString();
         } else {
-            // Для 8 битных целых
             return Math.round(value).toString();
         }
     },
 
-    // Обновление отображения параметра
     updateParamDisplay(widgetId, paramIndex, param, data) {
         const safeId = widgetId.replace(/[^a-zA-Z0-9-]/g, '-');
         const valueElement = document.getElementById(`numeric-value-${safeId}-${paramIndex}`);
@@ -191,7 +161,7 @@ export const numericWidget = {
 
         if (valueElement) {
             valueElement.textContent = data.formattedValue;
-            valueElement.style.color = param.color;
+            valueElement.style.color = param.color || '#000000'; // Чёрный по умолчанию для numeric
         }
 
         if (timestampElement) {
@@ -199,7 +169,6 @@ export const numericWidget = {
         }
     },
 
-    // Обновление счетчика фреймов
     updateFrameCount(widgetId, count) {
         const safeId = widgetId.replace(/[^a-zA-Z0-9-]/g, '-');
         const countElem = document.getElementById(`frame-count-${safeId}`);
@@ -208,14 +177,10 @@ export const numericWidget = {
         }
     },
 
-    // Обновление всего отображения
     updateDisplay(widgetId, widget) {
         const safeId = widgetId.replace(/[^a-zA-Z0-9-]/g, '-');
-
-        // Обновляем счетчик фреймов
         this.updateFrameCount(widgetId, widget.frameCount || 0);
 
-        // Обновляем значения параметров
         if (widget.config?.params && widget.data) {
             widget.config.params.forEach((param, index) => {
                 const paramData = widget.data[param.name];
@@ -226,14 +191,12 @@ export const numericWidget = {
         }
     },
 
-    // Рендеринг HTML виджета
     render(widgetId, widget) {
         const safeId = widgetId.replace(/[^a-zA-Z0-9-]/g, '-');
         const widgetName = widget.config?.widgetName || 'Numeric Values';
         const size = widget.size || 1;
         const paramCount = widget.config?.params?.length || 0;
 
-        // Создаем контейнер для числовых блоков
         let numericBlocksHtml = '';
 
         if (widget.config?.params) {
@@ -250,7 +213,7 @@ export const numericWidget = {
                         </div>
                         <div class="numeric-value-container">
                             <span class="numeric-value" id="numeric-value-${safeId}-${index}" 
-                                  style="color: ${param.color}">${paramData.formattedValue}</span>
+                                  style="color: ${param.color || '#000000'}">${paramData.formattedValue}</span>
                         </div>
                         <div class="numeric-footer">
                             <span class="numeric-timestamp" id="numeric-timestamp-${safeId}-${index}">
@@ -261,7 +224,6 @@ export const numericWidget = {
                 `;
             });
         } else {
-            // Заглушка если нет параметров
             numericBlocksHtml = `
                 <div class="no-data-message">
                     No parameters configured. Edit widget to add parameters.
@@ -291,12 +253,10 @@ export const numericWidget = {
         `;
     },
 
-    // Очистка ресурсов
     destroy(widgetId) {
         console.log(`Destroying numeric widget: ${widgetId}`);
     },
 
-    // Вспомогательная функция для конвертации hex в байты
     hexToBytes(hex) {
         const bytes = [];
         for (let i = 0; i < hex.length; i += 2) {
