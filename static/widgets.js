@@ -468,6 +468,16 @@ export function getWidgetsState() {
         delete widgetCopy.chart;
         delete widgetCopy.resizeHandler;
 
+        // Удаляем data, чтобы не сохранять временные данные
+        if (widgetCopy.type === 'canChart2') {
+            widgetCopy.data = {
+                labels: [],
+                datasets: {}
+            };
+        } else if (widgetCopy.type === 'numeric') {
+            widgetCopy.data = {};
+        }
+
         state[id] = widgetCopy;
     });
     return state;
@@ -479,7 +489,10 @@ export function setWidgetsState(state) {
 
     // Добавляем новые виджеты
     Object.entries(state).forEach(([id, widget]) => {
-        widgets.set(id, widget);
+        widgets.set(id, {
+            ...widget,
+            frameCount: 0 // Сбрасываем счетчик фреймов
+        });
     });
 
     // Перерисовываем виджеты

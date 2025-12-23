@@ -678,3 +678,135 @@ button {
     color: #666;
     font-family: monospace;
 }
+
+/* Стили для карточек профилей */
+.profile-card {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.profile-card:hover {
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+/* Подсветка текущего профиля */
+.profile-card[data-current="true"] {
+    border-color: #1dd1a1;
+    border-width: 2px;
+    background: #f8fff9;
+}
+
+.profile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.profile-name {
+    font-weight: bold;
+    color: #333;
+    font-size: 1.1em;
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Кнопки действий профиля */
+.profile-actions {
+    display: flex;
+    gap: 5px;
+    flex-shrink: 0;
+}
+
+.profile-btn {
+    padding: 4px 8px;
+    font-size: 0.8em;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 60px;
+    text-align: center;
+}
+
+.profile-btn.load {
+    background: #4dabf7;
+    color: white;
+}
+
+.profile-btn.load:hover {
+    background: #339af0;
+}
+
+.profile-btn.edit {
+    background: #ffc107;
+    color: #333;
+}
+
+.profile-btn.edit:hover {
+    background: #ffb300;
+}
+
+.profile-btn.delete {
+    background: #ff6b6b;
+    color: white;
+}
+
+.profile-btn.delete:hover {
+    background: #ff5252;
+}
+
+.profile-description {
+    color: #666;
+    font-size: 0.9em;
+    margin-bottom: 15px;
+    flex-grow: 1;
+    min-height: 40px;
+}
+
+.profile-stats {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8em;
+    color: #888;
+    margin-top: 10px;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.profile-stats span {
+    background: #f5f5f5;
+    padding: 3px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+}
+
+/* Кнопка сохранения в текущий профиль в карточке */
+.profile-current-actions {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #eee;
+}
+
+.profile-current-actions .profile-btn {
+    width: 100%;
+    background: #4dabf7;
+    color: white;
+    padding: 6px 12px;
+}
+
+.profile-current-actions .profile-btn:hover {
+    background: #339af0;
+}

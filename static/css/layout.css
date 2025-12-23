@@ -206,3 +206,80 @@ textarea:focus {
     outline: none;
     border-color: #667eea;
 }
+
+/* Стили для отображения текущего профиля */
+.current-profile-display {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 8px 16px;
+    border-radius: 20px;
+    margin-top: 15px;
+    font-size: 0.9em;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.current-profile-display strong {
+    color: #fff;
+}
+
+.current-profile-display .profile-btn {
+    padding: 4px 12px;
+    font-size: 0.8em;
+    border-radius: 4px;
+    background: #1dd1a1;
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.current-profile-display .profile-btn:hover {
+    background: #10ac84;
+}
+
+/* Бейдж текущего профиля в карточке */
+.current-badge {
+    background: #1dd1a1;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 0.7em;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
+/* Дополнительные действия для текущего профиля */
+.profile-current-actions {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #eee;
+    text-align: center;
+}
+
+.profile-current-actions .profile-btn {
+    width: 100%;
+    padding: 6px 12px;
+    font-size: 0.85em;
+}
+
+/* Кнопка сохранения в текущий профиль */
+.save-current-small {
+    background: #4dabf7 !important;
+    color: white !important;
+}
+
+.save-current-small:hover {
+    background: #339af0 !important;
+}
+
+/* Кнопки действий профиля */
+.profile-btn.current {
+    background: #1dd1a1 !important;
+    color: white !important;
+    cursor: default;
+}
+
+.profile-btn.current:hover {
+    background: #1dd1a1 !important;
+}

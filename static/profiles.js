@@ -4,6 +4,7 @@ export class ProfilesManager {
     constructor() {
         this.profiles = new Map();
         this.currentProfileId = null;
+        this.loadCurrentProfileId();
     }
 
     // Инициализация модуля
@@ -11,6 +12,31 @@ export class ProfilesManager {
         console.log('Profiles module initialized');
         this.setupEventListeners();
         this.loadProfiles();
+        this.updateCurrentProfileDisplay();
+    }
+
+    // Загрузка текущего профиля из localStorage
+    loadCurrentProfileId() {
+        try {
+            this.currentProfileId = localStorage.getItem('currentProfileId');
+            console.log('Loaded current profile ID:', this.currentProfileId);
+        } catch (e) {
+            console.error('Error loading current profile ID:', e);
+            this.currentProfileId = null;
+        }
+    }
+
+    // Сохранение текущего профиля в localStorage
+    saveCurrentProfileId() {
+        try {
+            if (this.currentProfileId) {
+                localStorage.setItem('currentProfileId', this.currentProfileId);
+            } else {
+                localStorage.removeItem('currentProfileId');
+            }
+        } catch (e) {
+            console.error('Error saving current profile ID:', e);
+        }
     }
 
     // Настройка обработчиков событий
@@ -25,6 +51,12 @@ export class ProfilesManager {
         const refreshBtn = document.getElementById('refreshProfilesBtn');
         if (refreshBtn) {
             refreshBtn.addEventListener('click', () => this.loadProfiles());
+        }
+
+        // Кнопка сохранения в текущий профиль
+        const saveCurrentBtn = document.getElementById('saveCurrentProfileBtn');
+        if (saveCurrentBtn) {
+            saveCurrentBtn.addEventListener('click', () => this.saveToCurrentProfile());
         }
 
         // Обработчики модального окна профиля
@@ -65,6 +97,33 @@ export class ProfilesManager {
         }
     }
 
+    // Обновление отображения текущего профиля
+    updateCurrentProfileDisplay() {
+        const currentProfileDisplay = document.getElementById('currentProfileDisplay');
+        if (!currentProfileDisplay) return;
+
+        if (this.currentProfileId && this.profiles.has(this.currentProfileId)) {
+            const profile = this.profiles.get(this.currentProfileId);
+            currentProfileDisplay.innerHTML = `
+                <strong>Current Profile:</strong> ${profile.name}
+                <button class="profile-btn save-current" id="saveCurrentProfileBtn" style="margin-left: 10px; padding: 4px 8px;">
+                    Save Current Settings
+                </button>
+            `;
+
+            // Добавляем обработчик для кнопки сохранения
+            const saveBtn = currentProfileDisplay.querySelector('.save-current');
+            if (saveBtn) {
+                saveBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.saveToCurrentProfile();
+                });
+            }
+        } else {
+            currentProfileDisplay.innerHTML = '<strong>No active profile</strong>';
+        }
+    }
+
     // Загрузка всех профилей с сервера
     async loadProfiles() {
         try {
@@ -100,7 +159,8 @@ export class ProfilesManager {
                             data: profileData.data || {},
                             createdAt: profileData.createdAt || new Date().toISOString(),
                             widgetsCount: profileData.data?.widgets ? Object.keys(profileData.data.widgets).length : 0,
-                            filtersCount: profileData.data?.filters ? (Array.isArray(profileData.data.filters) ? profileData.data.filters.length : 0) : 0
+                            filtersCount: profileData.data?.filters ? (Array.isArray(profileData.data.filters) ? profileData.data.filters.length : 0) : 0,
+                            updatedAt: profileData.updatedAt || profileData.createdAt || new Date().toISOString()
                         });
                     } catch (e) {
                         console.error('Error parsing profile:', setting.key, setting.value, e);
@@ -110,6 +170,7 @@ export class ProfilesManager {
                 console.log(`Loaded ${this.profiles.size} profiles`);
                 this.renderProfiles();
                 this.updateProfilesCount();
+                this.updateCurrentProfileDisplay();
             } else {
                 console.error('Failed to load profiles:', response.status);
             }
@@ -137,12 +198,19 @@ export class ProfilesManager {
         this.profiles.forEach((profile, profileId) => {
             const profileCard = document.createElement('div');
             profileCard.className = 'profile-card';
+            const isCurrent = profileId === this.currentProfileId;
 
             profileCard.innerHTML = `
                 <div class="profile-header">
-                    <div class="profile-name">${profile.name}</div>
+                    <div class="profile-name">
+                        ${profile.name}
+                        ${isCurrent ? '<span class="current-badge">Current</span>' : ''}
+                    </div>
                     <div class="profile-actions">
-                        <button class="profile-btn load" data-profile-id="${profileId}">Load</button>
+                        <button class="profile-btn ${isCurrent ? 'current' : 'load'}" 
+                                data-profile-id="${profileId}">
+                            ${isCurrent ? '✓ Current' : 'Load'}
+                        </button>
                         <button class="profile-btn edit" data-profile-id="${profileId}">Edit</button>
                         <button class="profile-btn delete" data-profile-id="${profileId}">Delete</button>
                     </div>
@@ -151,14 +219,24 @@ export class ProfilesManager {
                 <div class="profile-stats">
                     <span>Widgets: ${profile.widgetsCount}</span>
                     <span>Filters: ${profile.filtersCount}</span>
-                    <span>${new Date(profile.createdAt).toLocaleDateString()}</span>
+                    <span title="Updated: ${new Date(profile.updatedAt).toLocaleString()}">
+                        ${new Date(profile.updatedAt).toLocaleDateString()}
+                    </span>
                 </div>
+                ${isCurrent ? `
+                <div class="profile-current-actions">
+                    <button class="profile-btn save-current-small" data-profile-id="${profileId}">
+                        Save Current Settings
+                    </button>
+                </div>
+                ` : ''}
             `;
 
             // Добавляем обработчики действий
-            const loadBtn = profileCard.querySelector('.load');
+            const loadBtn = profileCard.querySelector('.load, .current');
             const editBtn = profileCard.querySelector('.edit');
             const deleteBtn = profileCard.querySelector('.delete');
+            const saveCurrentBtn = profileCard.querySelector('.save-current-small');
 
             if (loadBtn) {
                 loadBtn.addEventListener('click', () => this.loadProfile(profileId));
@@ -170,6 +248,13 @@ export class ProfilesManager {
 
             if (deleteBtn) {
                 deleteBtn.addEventListener('click', () => this.deleteProfile(profileId));
+            }
+
+            if (saveCurrentBtn) {
+                saveCurrentBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.saveToCurrentProfile();
+                });
             }
 
             container.appendChild(profileCard);
@@ -204,7 +289,8 @@ export class ProfilesManager {
                     name: profile.name,
                     description: profile.description,
                     data: profile.data,
-                    createdAt: profile.createdAt
+                    createdAt: profile.createdAt,
+                    updatedAt: profile.updatedAt
                 }, null, 2);
             }
         } else {
@@ -235,6 +321,7 @@ export class ProfilesManager {
                 description: descInput.value.trim(),
                 data: profileData,
                 createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
                 version: '1.0'
             };
 
@@ -347,6 +434,9 @@ export class ProfilesManager {
                 profileKey = `profile_${Date.now()}`;
             }
 
+            // Обновляем дату изменения
+            profileData.updatedAt = new Date().toISOString();
+
             // Отправляем на сервер
             const response = await fetch('/api/settings', {
                 method: 'POST',
@@ -355,7 +445,7 @@ export class ProfilesManager {
                 },
                 body: JSON.stringify({
                     key: profileKey,
-                    value: jsonInput.value
+                    value: JSON.stringify(profileData)
                 })
             });
 
@@ -363,6 +453,11 @@ export class ProfilesManager {
                 console.log('Profile saved successfully');
                 this.closeProfileModal();
                 this.loadProfiles(); // Перезагружаем список
+
+                // Если это текущий профиль, обновляем отображение
+                if (profileKey === this.currentProfileId) {
+                    this.updateCurrentProfileDisplay();
+                }
             } else {
                 const errorText = await response.text();
                 throw new Error(`Failed to save profile: ${errorText}`);
@@ -388,6 +483,14 @@ export class ProfilesManager {
             // Применяем настройки
             await this.applyProfileSettings(profile.data);
 
+            // Устанавливаем текущий профиль
+            this.currentProfileId = profileId;
+            this.saveCurrentProfileId();
+
+            // Обновляем отображение
+            this.updateCurrentProfileDisplay();
+            this.renderProfiles();
+
             // Переключаемся на основную вкладку
             this.switchToMainTab();
 
@@ -395,6 +498,60 @@ export class ProfilesManager {
         } catch (error) {
             console.error('Error loading profile:', error);
             alert('Error loading profile: ' + error.message);
+        }
+    }
+
+    // Сохранение текущих настроек в текущий профиль
+    async saveToCurrentProfile() {
+        if (!this.currentProfileId) {
+            alert('No active profile. Please load a profile first.');
+            return;
+        }
+
+        if (!confirm('Save current settings to the current profile? This will overwrite the existing profile data.')) {
+            return;
+        }
+
+        try {
+            // Получаем текущий профиль
+            const profile = this.profiles.get(this.currentProfileId);
+            if (!profile) {
+                throw new Error('Current profile not found');
+            }
+
+            // Генерируем новые данные профиля
+            const profileData = {
+                name: profile.name,
+                description: profile.description,
+                data: await this.generateCurrentSettingsJson(),
+                createdAt: profile.createdAt,
+                updatedAt: new Date().toISOString(),
+                version: '1.0'
+            };
+
+            // Сохраняем на сервере
+            const response = await fetch('/api/settings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    key: this.currentProfileId,
+                    value: JSON.stringify(profileData)
+                })
+            });
+
+            if (response.ok) {
+                console.log('Settings saved to current profile');
+                this.loadProfiles(); // Перезагружаем список профилей
+                alert('Current settings saved to profile successfully');
+            } else {
+                const errorText = await response.text();
+                throw new Error(`Failed to save settings: ${errorText}`);
+            }
+        } catch (error) {
+            console.error('Error saving to current profile:', error);
+            alert('Error saving to current profile: ' + error.message);
         }
     }
 
@@ -500,6 +657,14 @@ export class ProfilesManager {
             if (response.ok || response.status === 204) {
                 console.log('Profile deleted successfully');
                 this.profiles.delete(profileId);
+
+                // Если удаляемый профиль был текущим, очищаем текущий профиль
+                if (profileId === this.currentProfileId) {
+                    this.currentProfileId = null;
+                    this.saveCurrentProfileId();
+                    this.updateCurrentProfileDisplay();
+                }
+
                 this.renderProfiles();
                 this.updateProfilesCount();
             } else {
@@ -527,6 +692,10 @@ export class ProfilesManager {
 
     getCurrentProfileId() {
         return this.currentProfileId;
+    }
+
+    getCurrentProfile() {
+        return this.currentProfileId ? this.profiles.get(this.currentProfileId) : null;
     }
 }
 
