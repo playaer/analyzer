@@ -54,3 +54,155 @@
 .connection-controls button {
     flex: 1;
 }
+
+/* Стили для вкладок */
+.tabs {
+    display: flex;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 0;
+    margin: 0;
+}
+
+.tab-btn {
+    background: transparent;
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    font-size: 1em;
+    cursor: pointer;
+    transition: all 0.3s;
+    border-bottom: 3px solid transparent;
+    width: auto;
+    margin: 0;
+}
+
+.tab-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.tab-btn.active {
+    background: rgba(255, 255, 255, 0.2);
+    border-bottom-color: white;
+    font-weight: bold;
+}
+
+.tab-content {
+    display: none;
+    animation: fadeIn 0.3s;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Стили для профилей */
+.profiles-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.profile-card {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.profile-card:hover {
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+.profile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.profile-name {
+    font-weight: bold;
+    color: #333;
+    font-size: 1.1em;
+    flex-grow: 1;
+}
+
+.profile-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.profile-btn {
+    padding: 4px 8px;
+    font-size: 0.8em;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.profile-btn.load {
+    background: #4dabf7;
+    color: white;
+}
+
+.profile-btn.edit {
+    background: #ffc107;
+    color: #333;
+}
+
+.profile-btn.delete {
+    background: #ff6b6b;
+    color: white;
+}
+
+.profile-description {
+    color: #666;
+    font-size: 0.9em;
+    margin-bottom: 15px;
+    flex-grow: 1;
+}
+
+.profile-stats {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8em;
+    color: #888;
+    margin-top: 10px;
+}
+
+.profile-stats span {
+    background: #f5f5f5;
+    padding: 3px 8px;
+    border-radius: 10px;
+}
+
+/* Стили для textarea в профилях */
+textarea {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    resize: vertical;
+    min-height: 100px;
+}
+
+textarea:focus {
+    outline: none;
+    border-color: #667eea;
+}

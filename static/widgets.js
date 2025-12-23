@@ -457,3 +457,35 @@ function loadWidgetsFromStorage() {
 function saveWidgetsToStorage() {
     WidgetService.saveWidgetConfig(widgets);
 }
+
+export function getWidgetsState() {
+    const state = {};
+    widgets.forEach((widget, id) => {
+        // Копируем виджет без циклических ссылок
+        const widgetCopy = { ...widget };
+
+        // Удаляем временные свойства
+        delete widgetCopy.chart;
+        delete widgetCopy.resizeHandler;
+
+        state[id] = widgetCopy;
+    });
+    return state;
+}
+
+export function setWidgetsState(state) {
+    // Очищаем текущие виджеты
+    widgets.clear();
+
+    // Добавляем новые виджеты
+    Object.entries(state).forEach(([id, widget]) => {
+        widgets.set(id, widget);
+    });
+
+    // Перерисовываем виджеты
+    renderWidgets();
+}
+
+// Экспортируем в глобальную область видимости
+window.getWidgetsState = getWidgetsState;
+window.setWidgetsState = setWidgetsState;

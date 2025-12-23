@@ -168,3 +168,16 @@ export async function updateFilterDisplay() {
         console.error('Failed to load filters from server:', error);
     }
 }
+
+export function getFiltersState() {
+    return Array.from(filters);
+}
+
+export function setFiltersState(state) {
+    filters.clear();
+    state.forEach(filter => filters.add(filter));
+    updateFilterDisplay();
+}
+
+// Экспорт в глобальную область видимости
+window.updateFilterDisplay = updateFilterDisplay;

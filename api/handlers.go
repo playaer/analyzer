@@ -273,28 +273,35 @@ func (h *APIHandler) updateFilter(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *APIHandler) HandleSettings(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		h.getSettings(w, r)
-	case http.MethodPost:
-		h.saveSettings(w, r)
-	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
 func (h *APIHandler) getSettings(w http.ResponseWriter, r *http.Request) {
-	key := r.URL.Query().Get("key")
-
-	var value string
-	err := h.db.QueryRow("SELECT value FROM settings WHERE key = ?", key).Scan(&value)
+	rows, err := h.db.Query("SELECT key, value FROM settings WHERE 1")
 	if err != nil {
-		http.Error(w, "Setting not found", http.StatusNotFound)
+		h.log.Error().Err(err).Msg("Failed to query settings")
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
+	defer rows.Close()
 
-	settings := Settings{Key: key, Value: value}
+	var settings []struct {
+		Key   string `json:"key"`
+		Value string `json:"value"`
+	}
+
+	for rows.Next() {
+		var key, value string
+		if err := rows.Scan(&key, &value); err != nil {
+			h.log.Error().Err(err).Msg("Failed to scan setting")
+			continue
+		}
+		h.log.Info().Str("key", key).Str("value", value).Msg("Found setting")
+		settings = append(settings, struct {
+			Key   string `json:"key"`
+			Value string `json:"value"`
+		}{Key: key, Value: value})
+	}
+
+	h.log.Info().Int("count", len(settings)).Msg("Returning settings")
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(settings)
 }
@@ -318,6 +325,83 @@ func (h *APIHandler) saveSettings(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(s)
+}
+
+func (h *APIHandler) getSettingsByPrefix(w http.ResponseWriter, r *http.Request) {
+	prefix := r.URL.Query().Get("prefix")
+	if prefix == "" {
+		http.Error(w, "Prefix parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	h.log.Info().Str("prefix", prefix).Msg("Fetching settings by prefix")
+
+	rows, err := h.db.Query("SELECT key, value FROM settings WHERE key LIKE ?", prefix+"%")
+	if err != nil {
+		h.log.Error().Err(err).Msg("Failed to query settings")
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var settings []struct {
+		Key   string `json:"key"`
+		Value string `json:"value"`
+	}
+
+	for rows.Next() {
+		var key, value string
+		if err := rows.Scan(&key, &value); err != nil {
+			h.log.Error().Err(err).Msg("Failed to scan setting")
+			continue
+		}
+		h.log.Info().Str("key", key).Str("value", value).Msg("Found setting")
+		settings = append(settings, struct {
+			Key   string `json:"key"`
+			Value string `json:"value"`
+		}{Key: key, Value: value})
+	}
+
+	h.log.Info().Int("count", len(settings)).Msg("Returning settings")
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(settings)
+}
+
+// Добавляем метод DELETE для настроек
+func (h *APIHandler) deleteSetting(w http.ResponseWriter, r *http.Request) {
+	key := r.URL.Query().Get("key")
+	if key == "" {
+		http.Error(w, "Key parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	_, err := h.db.Exec("DELETE FROM settings WHERE key = ?", key)
+	if err != nil {
+		h.log.Error().Err(err).Msg("Failed to delete setting")
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// Обновляем HandleSettings:
+func (h *APIHandler) HandleSettings(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		if r.URL.Query().Get("prefix") != "" {
+			h.getSettingsByPrefix(w, r)
+		} else {
+			h.getSettings(w, r)
+		}
+	case http.MethodPost:
+		h.saveSettings(w, r)
+	case http.MethodDelete:
+		h.deleteSetting(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
 }
 
 func (h *APIHandler) HandleSendCAN(w http.ResponseWriter, r *http.Request) {

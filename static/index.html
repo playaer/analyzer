@@ -16,59 +16,89 @@
         <div id="connectionStatus" class="status disconnected">Disconnected</div>
     </header>
 
-    <div class="content">
-        <!-- Первый ряд: Sender и Filters в одном ряду -->
-        <div class="grid-2">
-            <!-- Block 1: CAN Frame Sender -->
-            <div class="section">
-                <div class="section-title">
-                    <span>CAN Frame Sender</span>
-                    <span class="data-points">Frames sent: <span id="sentCount">0</span></span>
+    <!-- Навигация по вкладкам -->
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="main">Main</button>
+        <button class="tab-btn" data-tab="profiles">Profiles</button>
+    </div>
+
+    <!-- Основная вкладка -->
+    <div id="main-tab" class="tab-content active">
+        <div class="content">
+            <!-- Первый ряд: Sender и Filters в одном ряду -->
+            <div class="grid-2">
+                <!-- Block 1: CAN Frame Sender -->
+                <div class="section">
+                    <div class="section-title">
+                        <span>CAN Frame Sender</span>
+                        <span class="data-points">Frames sent: <span id="sentCount">0</span></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="canId">CAN ID (hex):</label>
+                        <input type="text" id="canId" placeholder="0x200" value="0x200">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="canData">Data (hex bytes, space separated):</label>
+                        <input type="text" id="canData" placeholder="01 02 03 04 05 06 07 08">
+                    </div>
+
+                    <button onclick="sendCANFrame()">Send CAN Frame</button>
                 </div>
 
-                <div class="form-group">
-                    <label for="canId">CAN ID (hex):</label>
-                    <input type="text" id="canId" placeholder="0x200" value="0x200">
-                </div>
+                <!-- Block 2: Фильтры CAN ID -->
+                <div class="section">
+                    <div class="section-title">
+                        <span>CAN ID Filters</span>
+                        <span class="data-points">Active filters: <span id="filterCount">0</span></span>
+                    </div>
 
-                <div class="form-group">
-                    <label for="canData">Data (hex bytes, space separated):</label>
-                    <input type="text" id="canData" placeholder="01 02 03 04 05 06 07 08">
-                </div>
+                    <div class="controls-row">
+                        <input type="text" id="newFilterId" placeholder="0x200 (hex)">
+                        <button class="add-btn">Add Filter</button>
+                    </div>
 
-                <button onclick="sendCANFrame()">Send CAN Frame</button>
+                    <div id="filtersContainer" class="filters-container">
+                        <!-- Filters will be added here dynamically -->
+                    </div>
+                </div>
             </div>
-
-            <!-- Block 2: Фильтры CAN ID -->
+            <!-- Block 3: CAN ID Widgets -->
             <div class="section">
                 <div class="section-title">
-                    <span>CAN ID Filters</span>
-                    <span class="data-points">Active filters: <span id="filterCount">0</span></span>
+                    <span>CAN ID Widgets</span>
+                    <span class="data-points">Widgets: <span id="widgetCount">0</span></span>
                 </div>
 
                 <div class="controls-row">
-                    <input type="text" id="newFilterId" placeholder="0x200 (hex)">
-                    <button class="add-btn">Add Filter</button>
+                    <button class="add-btn" id="addWidgetBtn">Add Widget</button>
                 </div>
 
-                <div id="filtersContainer" class="filters-container">
-                    <!-- Filters will be added here dynamically -->
+                <div id="widgetsContainer" class="widgets-container">
+                    <!-- Widgets will be added here dynamically -->
                 </div>
             </div>
         </div>
-        <!-- Block 3: CAN ID Widgets -->
-        <div class="section">
-            <div class="section-title">
-                <span>CAN ID Widgets</span>
-                <span class="data-points">Widgets: <span id="widgetCount">0</span></span>
-            </div>
+    </div>
 
-            <div class="controls-row">
-                <button class="add-btn" id="addWidgetBtn">Add Widget</button>
-            </div>
+    <!-- Вкладка профилей -->
+    <div id="profiles-tab" class="tab-content">
+        <div class="content">
+            <div class="section">
+                <div class="section-title">
+                    <span>Profiles Management</span>
+                    <span class="data-points">Profiles: <span id="profilesCount">0</span></span>
+                </div>
 
-            <div id="widgetsContainer" class="widgets-container">
-                <!-- Widgets will be added here dynamically -->
+                <div class="controls-row">
+                    <button class="add-btn" id="createProfileBtn">Create New Profile</button>
+                    <button class="toggle-btn" id="refreshProfilesBtn">Refresh List</button>
+                </div>
+
+                <div id="profilesContainer" class="profiles-container">
+                    <!-- Profiles will be added here dynamically -->
+                </div>
             </div>
         </div>
     </div>
@@ -149,6 +179,40 @@
                 <div class="modal-actions">
                     <button id="modalSaveBtn" class="save-btn">Save Widget</button>
                     <button id="modalCancelBtn" class="cancel-btn">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for profile configuration -->
+    <div id="profileModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="profileModalTitle">Profile Configuration</h3>
+                <span class="modal-close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="profileName">Profile Name:</label>
+                    <input type="text" id="profileName" placeholder="My Profile">
+                </div>
+
+                <div class="form-group">
+                    <label for="profileDescription">Description:</label>
+                    <textarea id="profileDescription" rows="3" placeholder="Optional description"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Profile Data (JSON):</label>
+                    <textarea id="profileJson" rows="15" placeholder="Profile JSON will be generated automatically"></textarea>
+                    <small style="color: #666; font-size: 0.8em;">
+                        This JSON contains all current settings: widgets, filters, and sender configuration.
+                    </small>
+                </div>
+
+                <div class="modal-actions">
+                    <button id="profileSaveBtn" class="save-btn">Save Profile</button>
+                    <button id="profileCancelBtn" class="cancel-btn">Cancel</button>
                 </div>
             </div>
         </div>

@@ -3,6 +3,10 @@ import { initWebSocket, connectWebSocket } from './websocket.js';
 import { initFilters, updateFilterDisplay } from './filters.js';
 import { initWidgets, processCANFrameForWidgets } from './widgets.js';
 import { initSender, sendCANFrame } from './sender.js';
+import { ProfilesManager, initTabs } from './profiles.js';
+
+// Глобальная переменная для менеджера профилей
+let profilesManager;
 
 // Инициализация приложения
 export async function init() {
@@ -13,6 +17,14 @@ export async function init() {
     initFilters();
     initWidgets();
     initSender();
+
+    // Инициализируем вкладки и профили
+    initTabs();
+    profilesManager = new ProfilesManager();
+    profilesManager.init();
+
+    // Экспортируем менеджер профилей в глобальную область видимости
+    window.profilesManager = profilesManager;
 
     // Загружаем фильтры с сервера
     await updateFilterDisplay();
