@@ -13,7 +13,7 @@ export function initWebSocket(msgHandler, statusHandler) {
 // Connect to WebSocket
 export function connectWebSocket(url) {
     if (ws && ws.readyState === WebSocket.OPEN) {
-        return;
+        return ws;
     }
 
     ws = new WebSocket(url);
@@ -42,6 +42,8 @@ export function connectWebSocket(url) {
             console.error('Failed to parse WebSocket message:', error);
         }
     };
+
+    return ws;
 }
 
 // Disconnect from WebSocket
@@ -63,5 +65,10 @@ export function sendWebSocketMessage(message) {
 
 // Check if WebSocket is connected
 export function isWebSocketConnected() {
-    return isConnected;
+    return isConnected && ws && ws.readyState === WebSocket.OPEN;
+}
+
+// Get WebSocket instance
+export function getWebSocket() {
+    return ws;
 }

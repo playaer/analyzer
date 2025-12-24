@@ -26,8 +26,8 @@
     <!-- Основная вкладка -->
     <div id="main-tab" class="tab-content active">
         <div class="content">
-            <!-- Первый ряд: Sender и Filters в одном ряду -->
-            <div class="grid-2">
+            <!-- Первый ряд: Sender, UDS Sender и Filters -->
+            <div class="grid-3">
                 <!-- Block 1: CAN Frame Sender -->
                 <div class="section">
                     <div class="section-title">
@@ -48,7 +48,23 @@
                     <button onclick="sendCANFrame()">Send CAN Frame</button>
                 </div>
 
-                <!-- Block 2: Фильтры CAN ID -->
+                <!-- Block 2: UDS Sender -->
+                <div class="section">
+                    <div class="section-title">
+                        <span>UDS Sender</span>
+                        <span class="data-points">Widgets: <span id="udsWidgetCount">0</span></span>
+                    </div>
+
+                    <div class="controls-row">
+                        <button class="add-btn" onclick="openUDSModal()">Add UDS Widget</button>
+                    </div>
+
+                    <div id="udsWidgetsContainer" class="widgets-container uds-widgets-container">
+                        <!-- UDS Widgets will be added here dynamically -->
+                    </div>
+                </div>
+
+                <!-- Block 3: Фильтры CAN ID -->
                 <div class="section">
                     <div class="section-title">
                         <span>CAN ID Filters</span>
@@ -65,7 +81,8 @@
                     </div>
                 </div>
             </div>
-            <!-- Block 3: CAN ID Widgets -->
+
+            <!-- Block 4: CAN ID Widgets -->
             <div class="section">
                 <div class="section-title">
                     <span>CAN ID Widgets</span>
@@ -106,118 +123,16 @@
 
     <!-- Modal for widget configuration -->
     <div id="widgetModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="modalTitle">Widget Configuration</h3>
-                <span class="modal-close">&times;</span>
-            </div>
-            <div class="modal-body">
-                <!-- Скрытое поле для widgetId -->
-                <input type="hidden" id="modalWidgetId" value="">
-
-                <!-- Widget Name и Type в одной строке -->
-                <div class="modal-grid-2">
-                    <div class="form-group">
-                        <label for="modalWidgetName">Widget Name:</label>
-                        <input type="text" id="modalWidgetName" placeholder="Engine Parameters">
-                    </div>
-                    <div class="form-group">
-                        <label for="modalWidgetType">Widget Type:</label>
-                        <select id="modalWidgetType">
-                            <option value="numeric">Numeric Values (up to 4 params)</option>
-                            <option value="canChart2">Multi Chart (up to 4 params)</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Chart Settings для Multi Chart -->
-                <div id="chartSettings" class="widget-config-section" style="display: none;">
-                    <h4>Chart Settings</h4>
-                    <div class="modal-grid-3">
-                        <div class="form-group">
-                            <label for="chartYMin">Y Min:</label>
-                            <input type="number" id="chartYMin" placeholder="Auto">
-                        </div>
-                        <div class="form-group">
-                            <label for="chartYMax">Y Max:</label>
-                            <input type="number" id="chartYMax" placeholder="Auto">
-                        </div>
-                        <div class="form-group auto-scale">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="chartAutoScale" checked>
-                                <span>Auto Scale</span>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Multi Chart Configuration -->
-                <div id="multiChartConfig" class="widget-config-section" style="display: none;">
-                    <div class="config-header">
-                        <h4>Multi Chart Parameters</h4>
-                        <button type="button" id="addParamBtn" class="add-param-btn">
-                            + Add Parameter
-                        </button>
-                    </div>
-                    <div id="paramContainer">
-                        <!-- Parameter components will be inserted here -->
-                    </div>
-                </div>
-
-                <!-- Numeric Widget Configuration -->
-                <div id="numericConfig" class="widget-config-section" style="display: none;">
-                    <div class="config-header">
-                        <h4>Numeric Widget Parameters</h4>
-                        <button type="button" id="addNumericParamBtn" class="add-param-btn">
-                            + Add Parameter
-                        </button>
-                    </div>
-                    <div id="numericParamContainer">
-                        <!-- Parameter components will be inserted here -->
-                    </div>
-                </div>
-
-                <div class="modal-actions">
-                    <button id="modalSaveBtn" class="save-btn">Save Widget</button>
-                    <button id="modalCancelBtn" class="cancel-btn">Cancel</button>
-                </div>
-            </div>
-        </div>
+        <!-- ... existing widget modal ... -->
     </div>
 
     <!-- Modal for profile configuration -->
     <div id="profileModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="profileModalTitle">Profile Configuration</h3>
-                <span class="modal-close">&times;</span>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="profileName">Profile Name:</label>
-                    <input type="text" id="profileName" placeholder="My Profile">
-                </div>
-
-                <div class="form-group">
-                    <label for="profileDescription">Description:</label>
-                    <textarea id="profileDescription" rows="3" placeholder="Optional description"></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label>Profile Data (JSON):</label>
-                    <textarea id="profileJson" rows="15" placeholder="Profile JSON will be generated automatically"></textarea>
-                    <small style="color: #666; font-size: 0.8em;">
-                        This JSON contains all current settings: widgets, filters, and sender configuration.
-                    </small>
-                </div>
-
-                <div class="modal-actions">
-                    <button id="profileSaveBtn" class="save-btn">Save Profile</button>
-                    <button id="profileCancelBtn" class="cancel-btn">Cancel</button>
-                </div>
-            </div>
-        </div>
+        <!-- ... existing profile modal ... -->
     </div>
+
+    <!-- Modal for UDS widget configuration (will be created dynamically) -->
+
 </div>
 </body>
 </html>

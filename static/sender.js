@@ -41,3 +41,48 @@ export function sendCANFrame() {
         alert('Не удалось отправить CAN фрейм: WebSocket не подключен');
     }
 }
+
+// Функция для отправки UDS запросов через CAN
+export function sendUDSRequest(request) {
+    if (!isWebSocketConnected()) {
+        console.error('WebSocket not connected for UDS request');
+        return false;
+    }
+
+    // Преобразуем UDS запрос в CAN сообщение
+    const canId = '0x7E0'; // Стандартный CAN ID для UDS запросов
+    let data = '';
+
+    switch(request.sid) {
+        case '22': // ReadDataByIdentifier
+            const did = parseInt(request.address, 16);
+            data = '22' + ('0000' + did.toString(16)).slice(-4).toUpperCase();
+            break;
+
+        case '23': // ReadMemoryByAddress
+            const addr = parseInt(request.address, 16);
+            const length = request.length || 4;
+            data = '23' +
+                ('00000000' + addr.toString(16)).slice(-8).toUpperCase() +
+                ('00' + length.toString(16)).slice(-2).toUpperCase();
+            break;
+
+        case '27': // SecurityAccess
+            const subFunc = parseInt(request.address, 16);
+            data = '27' + ('00' + subFunc.toString(16)).slice(-2).toUpperCase();
+            break;
+
+        case '31': // RoutineControl
+            const routineId = parseInt(request.address, 16);
+            data = '31' + ('0000' + routineId.toString(16)).slice(-4).toUpperCase() + '01';
+            break;
+    }
+
+    const message = {
+        type: 'send_can',
+        id: canId,
+        data: data
+    };
+
+    return sendWebSocketMessage(message);
+}
