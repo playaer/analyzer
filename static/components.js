@@ -1,4 +1,6 @@
-// Компонент конфигурации параметра для виджетов с оптимизированным интерфейсом
+// Компоненты приложения
+
+// ==================== ПАРАМЕТР КОНФИГУРАЦИИ ====================
 
 // Палитра цветов по умолчанию
 const COLOR_PALETTE = [
@@ -41,7 +43,6 @@ export class ParamConfig {
                            value="${this.config.name}" placeholder="Parameter name">
                 </div>
                 
-                <!-- CAN ID и фильтры по байтам в одной строке -->
                 <div class="grid-3">
                     <div class="form-group">
                         <label for="param-canid-${this.paramIndex}">CAN ID:</label>
@@ -86,7 +87,6 @@ export class ParamConfig {
                     </div>
                 </div>
                 
-                <!-- Цвет в отдельной строке -->
                 <div class="form-group">
                     <label>Color:</label>
                     <div class="color-palette" id="color-palette-${this.paramIndex}">
@@ -96,7 +96,6 @@ export class ParamConfig {
                            value="${selectedColor}">
                 </div>
                 
-                <!-- Multiplier и Adder в одной строке -->
                 <div class="grid-2">
                     <div class="form-group">
                         <label for="param-multiplier-${this.paramIndex}">Multiplier:</label>
@@ -159,15 +158,11 @@ export function createParamElement(param, widgetType = 'canChart2') {
             if (colorOption) {
                 const color = colorOption.dataset.color;
 
-                // Убираем выделение со всех вариантов
                 colorPalette.querySelectorAll('.color-option').forEach(opt => {
                     opt.classList.remove('selected');
                 });
 
-                // Выделяем выбранный вариант
                 colorOption.classList.add('selected');
-
-                // Устанавливаем значение
                 colorInput.value = color;
             }
         });
@@ -184,44 +179,56 @@ export function createParamElement(param, widgetType = 'canChart2') {
     return element;
 }
 
-// Функция для применения формулы к значению
-export function applyFormula(value, multiplier = 1, adder = 0) {
-    return (value * multiplier) + adder;
+// ==================== КОМПОНЕНТ ВЫБОРА ЦВЕТА ====================
+
+// Компонент для выбора цвета линии
+export function createColorPicker(initialColor = '#ff6384', label = 'Line Color:') {
+    const container = document.createElement('div');
+    container.className = 'color-picker-container';
+
+    const labelElement = document.createElement('label');
+    labelElement.textContent = label;
+    container.appendChild(labelElement);
+
+    const colorInput = document.createElement('input');
+    colorInput.type = 'color';
+    colorInput.value = initialColor;
+    colorInput.className = 'color-input';
+
+    const preview = document.createElement('div');
+    preview.className = 'color-preview';
+    preview.style.backgroundColor = initialColor;
+    preview.style.width = '30px';
+    preview.style.height = '20px';
+    preview.style.display = 'inline-block';
+    preview.style.marginLeft = '10px';
+    preview.style.borderRadius = '3px';
+    preview.style.border = '1px solid #ccc';
+
+    colorInput.addEventListener('input', (e) => {
+        preview.style.backgroundColor = e.target.value;
+    });
+
+    const wrapper = document.createElement('div');
+    wrapper.style.display = 'flex';
+    wrapper.style.alignItems = 'center';
+    wrapper.style.gap = '10px';
+    wrapper.appendChild(colorInput);
+    wrapper.appendChild(preview);
+
+    container.appendChild(wrapper);
+
+    return {
+        container,
+        getColor: () => colorInput.value,
+        setColor: (color) => {
+            colorInput.value = color;
+            preview.style.backgroundColor = color;
+        }
+    };
 }
 
-// Функция проверки фрейма на соответствие фильтрам параметра
-export function checkFrameAgainstParam(frame, param) {
-    // Проверка CAN ID
-    if (frame.id.toLowerCase() !== param.canId.toLowerCase()) {
-        return false;
-    }
-
-    // Если есть фильтры по байтам, проверяем их
-    const hexToBytes = (hex) => {
-        const bytes = [];
-        for (let i = 0; i < hex.length; i += 2) {
-            bytes.push(parseInt(hex.substr(i, 2), 16));
-        }
-        return bytes;
-    };
-
-    const data = hexToBytes(frame.data);
-
-    // Проверка байта 0 (если указан фильтр)
-    if (param.byte0Filter && param.byte0Filter.trim() !== '') {
-        const filterValue = parseInt(param.byte0Filter, 16);
-        if (data.length === 0 || data[0] !== filterValue) {
-            return false;
-        }
-    }
-
-    // Проверка байта 1 (если указан фильтр)
-    if (param.byte1Filter && param.byte1Filter.trim() !== '') {
-        const filterValue = parseInt(param.byte1Filter, 16);
-        if (data.length < 2 || data[1] !== filterValue) {
-            return false;
-        }
-    }
-
-    return true;
+export function getColorValue(colorPickerContainer) {
+    const input = colorPickerContainer.querySelector('.color-input');
+    return input ? input.value : '#ff6384';
 }

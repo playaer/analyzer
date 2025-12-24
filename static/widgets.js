@@ -2,12 +2,11 @@
 import { numericWidget } from './numericWidget.js';
 import { canChart2Widget } from './canChart2.js';
 import { WidgetService } from './widgetService.js';
-import { WidgetDrag } from './widgetDrag.js';
-import { initWidgetResize } from './widgetResize.js';
-import { ParamConfig, createParamElement } from './components/paramConfig.js';
+import { ParamConfig, createParamElement } from './components.js';
+import { WidgetInteractions, addResizeHandle } from './widgetInteractions.js';
 
 export let widgets = new Map();
-let widgetDrag = null;
+let widgetInteractions = null;
 let currentEditWidgetId = null;
 
 // Инициализация
@@ -16,7 +15,27 @@ export function initWidgets() {
     loadWidgetsFromStorage();
     renderWidgets();
     setupModalEvents();
-    widgetDrag = new WidgetDrag();
+
+    widgetInteractions = new WidgetInteractions();
+    widgetInteractions.onResize((newSize, widgetElement) => {
+        const widgetId = widgetElement.id.replace('widget-', '');
+        const widget = widgets.get(widgetId);
+        if (widget) {
+            widget.size = newSize;
+            const badge = widgetElement.querySelector('.widget-size-badge');
+            if (badge) {
+                badge.textContent = `${newSize}×`;
+            }
+            saveWidgetsToStorage();
+
+            setTimeout(() => {
+                if (widget.chart) {
+                    widget.chart.resize();
+                    widget.chart.update('none');
+                }
+            }, 100);
+        }
+    });
 }
 
 // Обработка CAN фреймов
@@ -27,7 +46,6 @@ export function processCANFrameForWidgets(frame) {
         if (widget.enabled) {
             let shouldProcess = false;
 
-            // Проверяем, слушает ли виджет этот CAN ID
             if (widget.type === 'numeric') {
                 shouldProcess = widget.config?.params?.some(param =>
                     param.canId.toLowerCase() === canId
@@ -66,36 +84,29 @@ function setupModalEvents() {
     const addParamBtn = document.getElementById('addParamBtn');
     const addNumericParamBtn = document.getElementById('addNumericParamBtn');
 
-    // Кнопка добавления виджета
     if (addBtn) {
         addBtn.addEventListener('click', () => openModal());
     }
 
-    // Закрытие модального окна
     if (closeBtn) closeBtn.addEventListener('click', closeModal);
     if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
 
-    // Изменение типа виджета
     if (widgetTypeSelect) {
         widgetTypeSelect.addEventListener('change', (e) => {
             updateModalForType(e.target.value);
         });
     }
 
-    // Добавление параметра для multi-chart
     if (addParamBtn) {
         addParamBtn.addEventListener('click', () => addParamComponent());
     }
 
-    // Добавление параметра для numeric
     if (addNumericParamBtn) {
         addNumericParamBtn.addEventListener('click', () => addNumericParamComponent());
     }
 
-    // Сохранение виджета
     if (saveBtn) saveBtn.addEventListener('click', saveWidget);
 
-    // Закрытие по клику вне окна
     window.addEventListener('click', (e) => {
         if (e.target === modal) {
             closeModal();
@@ -113,7 +124,6 @@ function openModal(widgetId = null) {
     const modalWidgetType = document.getElementById('modalWidgetType');
 
     if (widgetId) {
-        // Режим редактирования
         modalTitle.textContent = 'Edit Widget';
         const widget = widgets.get(widgetId);
         if (widget) {
@@ -123,11 +133,10 @@ function openModal(widgetId = null) {
             loadWidgetConfig(widget);
         }
     } else {
-        // Режим добавления
         modalTitle.textContent = 'Add New Widget';
         modalWidgetId.value = WidgetService.generateUniqueWidgetId();
         modalWidgetName.value = '';
-        modalWidgetType.value = 'numeric'; // По умолчанию numeric
+        modalWidgetType.value = 'numeric';
         resetModalConfig();
     }
 
@@ -138,14 +147,11 @@ function openModal(widgetId = null) {
 function loadWidgetConfig(widget) {
     const paramContainer = document.getElementById('paramContainer');
     const numericParamContainer = document.getElementById('numericParamContainer');
-    const chartSettings = document.getElementById('chartSettings');
 
-    // Очищаем контейнеры
     if (paramContainer) paramContainer.innerHTML = '';
     if (numericParamContainer) numericParamContainer.innerHTML = '';
 
     if (widget.type === 'canChart2') {
-        // Загружаем настройки графика
         const yMinInput = document.getElementById('chartYMin');
         const yMaxInput = document.getElementById('chartYMax');
         const autoScaleCheckbox = document.getElementById('chartAutoScale');
@@ -156,7 +162,6 @@ function loadWidgetConfig(widget) {
             autoScaleCheckbox.checked = widget.config?.autoScale !== false;
         }
 
-        // Загружаем параметры
         if (widget.config?.params) {
             widget.config.params.forEach((paramData, index) => {
                 const param = new ParamConfig(index, { ...paramData, type: 'canChart2' });
@@ -213,7 +218,6 @@ function updateModalForType(type) {
     const multiConfig = document.getElementById('multiChartConfig');
     const numericConfig = document.getElementById('numericConfig');
 
-    // Скрываем все конфигурации
     if (chartSettings) chartSettings.style.display = 'none';
     if (multiConfig) multiConfig.style.display = 'none';
     if (numericConfig) numericConfig.style.display = 'none';
@@ -364,22 +368,10 @@ export function renderWidgets() {
             }
         }
 
-        container.appendChild(widgetElement);
+        // Добавляем resize handle
+        addResizeHandle(widgetElement);
 
-        initWidgetResize(widgetElement, (newSize) => {
-            widget.size = newSize;
-            const badge = widgetElement.querySelector('.widget-size-badge');
-            if (badge) {
-                badge.textContent = `${newSize}×`;
-            }
-            saveWidgetsToStorage();
-            setTimeout(() => {
-                if (widget.chart) {
-                    widget.chart.resize();
-                    widget.chart.update('none');
-                }
-            }, 100);
-        });
+        container.appendChild(widgetElement);
 
         setTimeout(() => {
             switch (widget.type) {
@@ -421,10 +413,6 @@ function removeWidget(widgetId) {
 
     const widget = widgets.get(widgetId);
     if (widget) {
-        if (widget.resizeHandler) {
-            widget.resizeHandler.destroy();
-        }
-
         switch (widget.type) {
             case 'canChart2':
                 canChart2Widget.destroy(widgetId);
@@ -461,14 +449,11 @@ function saveWidgetsToStorage() {
 export function getWidgetsState() {
     const state = {};
     widgets.forEach((widget, id) => {
-        // Копируем виджет без циклических ссылок
         const widgetCopy = { ...widget };
 
-        // Удаляем временные свойства
         delete widgetCopy.chart;
         delete widgetCopy.resizeHandler;
 
-        // Удаляем data, чтобы не сохранять временные данные
         if (widgetCopy.type === 'canChart2') {
             widgetCopy.data = {
                 labels: [],
@@ -484,18 +469,15 @@ export function getWidgetsState() {
 }
 
 export function setWidgetsState(state) {
-    // Очищаем текущие виджеты
     widgets.clear();
 
-    // Добавляем новые виджеты
     Object.entries(state).forEach(([id, widget]) => {
         widgets.set(id, {
             ...widget,
-            frameCount: 0 // Сбрасываем счетчик фреймов
+            frameCount: 0
         });
     });
 
-    // Перерисовываем виджеты
     renderWidgets();
 }
 

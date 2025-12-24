@@ -1,5 +1,5 @@
 // Multi Chart Widget (up to 4 parameters)
-import { MAX_POINTS, hexToBytes } from './utils.js';
+import { MAX_POINTS, hexToBytes, calculateParamValue, checkParamFilters, hexToRgba } from './utils.js';
 
 export const canChart2Widget = {
     initChart(widgetId, widget) {
@@ -97,7 +97,7 @@ export const canChart2Widget = {
                     label: param.name,
                     data: widget.data.datasets[param.name] || [],
                     borderColor: param.color,
-                    backgroundColor: this.hexToRgba(param.color, 0.1),
+                    backgroundColor: hexToRgba(param.color, 0.1),
                     borderWidth: 2,
                     tension: 0.3,
                     fill: false,
@@ -160,14 +160,14 @@ export const canChart2Widget = {
         widget.data.labels.push(timestamp);
 
         widget.config.params.forEach((param, paramIndex) => {
-            const passesFilter = this.checkParamFilters(param, frame);
+            const passesFilter = checkParamFilters(param, frame);
 
             if (!passesFilter) {
                 widget.data.datasets[param.name].push(null);
                 return;
             }
 
-            const value = this.calculateParamValue(param, data);
+            const value = calculateParamValue(param, data);
             widget.data.datasets[param.name].push(value);
 
             const lastValueElem = document.getElementById(`last-value-${safeId}-${paramIndex}`);
@@ -203,122 +203,6 @@ export const canChart2Widget = {
 
             widget.chart.update('none');
         }
-    },
-
-    checkParamFilters(param, frame) {
-        // Проверка CAN ID
-        if (param.canId.toLowerCase() !== frame.id.toLowerCase()) {
-            return false;
-        }
-
-        const data = this.hexToBytes(frame.data);
-
-        // Проверка байта 0 (если указан фильтр)
-        if (param.byte0Filter && param.byte0Filter.trim() !== '') {
-            const filterValue = parseInt(param.byte0Filter, 16);
-            if (data.length === 0 || data[0] !== filterValue) {
-                return false;
-            }
-        }
-
-        // Проверка байта 1 (если указан фильтр)
-        if (param.byte1Filter && param.byte1Filter.trim() !== '') {
-            const filterValue = parseInt(param.byte1Filter, 16);
-            if (data.length < 2 || data[1] !== filterValue) {
-                return false;
-            }
-        }
-
-        return true;
-    },
-
-    hexToBytes(hex) {
-        const bytes = [];
-        for (let i = 0; i < hex.length; i += 2) {
-            bytes.push(parseInt(hex.substr(i, 2), 16));
-        }
-        return bytes;
-    },
-
-    calculateParamValue(param, canData) {
-        const byteIndex = param.byteIndex;
-        const size = param.size || '8';
-        const multiplier = param.multiplier || 1;
-        const adder = param.adder || 0;
-
-        if (byteIndex >= canData.length) return 0;
-
-        let rawValue;
-
-        switch (size) {
-            case '8': // 8-bit signed
-                let value8 = canData[byteIndex];
-                rawValue = value8 > 127 ? value8 - 256 : value8;
-                break;
-
-            case '8u': // 8-bit unsigned
-                rawValue = canData[byteIndex];
-                break;
-
-            case '16': // 16-bit signed (big-endian)
-                if (byteIndex + 1 >= canData.length) return 0;
-                const val16 = (canData[byteIndex] << 8) | canData[byteIndex + 1];
-                rawValue = val16 > 32767 ? val16 - 65536 : val16;
-                break;
-
-            case '16u': // 16-bit unsigned (big-endian)
-                if (byteIndex + 1 >= canData.length) return 0;
-                rawValue = (canData[byteIndex] << 8) | canData[byteIndex + 1];
-                break;
-
-            case '32': // 32-bit signed (big-endian)
-                if (byteIndex + 3 >= canData.length) return 0;
-                const val32 = (canData[byteIndex] << 24) |
-                    (canData[byteIndex + 1] << 16) |
-                    (canData[byteIndex + 2] << 8) |
-                    canData[byteIndex + 3];
-                rawValue = val32 > 2147483647 ? val32 - 4294967296 : val32;
-                break;
-
-            case '32u': // 32-bit unsigned (big-endian)
-                if (byteIndex + 3 >= canData.length) return 0;
-                rawValue = (canData[byteIndex] << 24) |
-                    (canData[byteIndex + 1] << 16) |
-                    (canData[byteIndex + 2] << 8) |
-                    canData[byteIndex + 3];
-                break;
-
-            case '32f': // 32-bit float (big-endian)
-                if (byteIndex + 3 >= canData.length) return 0;
-                const buffer = new ArrayBuffer(4);
-                const view = new DataView(buffer);
-                view.setUint8(0, canData[byteIndex]);
-                view.setUint8(1, canData[byteIndex + 1]);
-                view.setUint8(2, canData[byteIndex + 2]);
-                view.setUint8(3, canData[byteIndex + 3]);
-                rawValue = parseFloat(view.getFloat32(0, false).toFixed(4));
-                break;
-
-            default:
-                rawValue = 0;
-        }
-
-        const result = (rawValue * multiplier) + adder;
-
-        if (size === '32f') {
-            return parseFloat(result.toFixed(4));
-        }
-        if (size.includes('32') || size.includes('16')) {
-            return Math.round(result);
-        }
-        return result;
-    },
-
-    hexToRgba(hex, alpha) {
-        const r = parseInt(hex.slice(1, 3), 16);
-        const g = parseInt(hex.slice(3, 5), 16);
-        const b = parseInt(hex.slice(5, 7), 16);
-        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     },
 
     render(widgetId, widget) {

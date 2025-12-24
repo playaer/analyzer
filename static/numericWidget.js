@@ -1,5 +1,5 @@
 // Numeric Widget - отображение числовых значений в блоках
-import { hexToBytes } from './utils.js';
+import { hexToBytes, calculateParamValue, checkParamFilters, formatValue } from './utils.js';
 
 export const numericWidget = {
     initWidget(widgetId, widget) {
@@ -37,15 +37,14 @@ export const numericWidget = {
         this.updateFrameCount(widgetId, widget.frameCount);
 
         widget.config.params.forEach((param, paramIndex) => {
-            const passesFilter = this.checkParamFilters(param, frame);
+            const passesFilter = checkParamFilters(param, frame);
 
             if (!passesFilter) {
                 return;
             }
 
-            const rawValue = this.calculateParamValue(param, data);
-            const value = (rawValue * (param.multiplier || 1)) + (param.adder || 0);
-            const formattedValue = this.formatValue(value, param);
+            const value = calculateParamValue(param, data);
+            const formattedValue = formatValue(value, param);
 
             if (!widget.data[param.name]) {
                 widget.data[param.name] = {};
@@ -55,103 +54,11 @@ export const numericWidget = {
                 value: value,
                 formattedValue: formattedValue,
                 timestamp: new Date().toLocaleTimeString(),
-                rawValue: rawValue
+                rawValue: value
             };
 
             this.updateParamDisplay(widgetId, paramIndex, param, widget.data[param.name]);
         });
-    },
-
-    checkParamFilters(param, frame) {
-        // Проверка CAN ID
-        if (param.canId.toLowerCase() !== frame.id.toLowerCase()) {
-            return false;
-        }
-
-        const data = this.hexToBytes(frame.data);
-
-        // Проверка байта 0 (если указан фильтр)
-        if (param.byte0Filter && param.byte0Filter.trim() !== '') {
-            const filterValue = parseInt(param.byte0Filter, 16);
-            if (data.length === 0 || data[0] !== filterValue) {
-                return false;
-            }
-        }
-
-        // Проверка байта 1 (если указан фильтр)
-        if (param.byte1Filter && param.byte1Filter.trim() !== '') {
-            const filterValue = parseInt(param.byte1Filter, 16);
-            if (data.length < 2 || data[1] !== filterValue) {
-                return false;
-            }
-        }
-
-        return true;
-    },
-
-    calculateParamValue(param, canData) {
-        const byteIndex = param.byteIndex;
-        const size = param.size || '8';
-
-        if (byteIndex >= canData.length) return 0;
-
-        switch (size) {
-            case '8': // 8-bit signed
-                let value8 = canData[byteIndex];
-                return value8 > 127 ? value8 - 256 : value8;
-
-            case '8u': // 8-bit unsigned
-                return canData[byteIndex];
-
-            case '16': // 16-bit signed (big-endian)
-                if (byteIndex + 1 >= canData.length) return 0;
-                const val16 = (canData[byteIndex] << 8) | canData[byteIndex + 1];
-                return val16 > 32767 ? val16 - 65536 : val16;
-
-            case '16u': // 16-bit unsigned (big-endian)
-                if (byteIndex + 1 >= canData.length) return 0;
-                return (canData[byteIndex] << 8) | canData[byteIndex + 1];
-
-            case '32': // 32-bit signed (big-endian)
-                if (byteIndex + 3 >= canData.length) return 0;
-                const val32 = (canData[byteIndex] << 24) |
-                    (canData[byteIndex + 1] << 16) |
-                    (canData[byteIndex + 2] << 8) |
-                    canData[byteIndex + 3];
-                return val32 > 2147483647 ? val32 - 4294967296 : val32;
-
-            case '32u': // 32-bit unsigned (big-endian)
-                if (byteIndex + 3 >= canData.length) return 0;
-                return (canData[byteIndex] << 24) |
-                    (canData[byteIndex + 1] << 16) |
-                    (canData[byteIndex + 2] << 8) |
-                    canData[byteIndex + 3];
-
-            case '32f': // 32-bit float (big-endian)
-                if (byteIndex + 3 >= canData.length) return 0;
-                const buffer = new ArrayBuffer(4);
-                const view = new DataView(buffer);
-                view.setUint8(0, canData[byteIndex]);
-                view.setUint8(1, canData[byteIndex + 1]);
-                view.setUint8(2, canData[byteIndex + 2]);
-                view.setUint8(3, canData[byteIndex + 3]);
-                return parseFloat(view.getFloat32(0, false).toFixed(4));
-
-            default:
-                return 0;
-        }
-    },
-
-    formatValue(value, param) {
-        const size = param.size || '8';
-
-        if (size === '32f') {
-            return value.toFixed(4);
-        } else if (size.includes('32') || size.includes('16')) {
-            return Math.round(value).toString();
-        } else {
-            return Math.round(value).toString();
-        }
     },
 
     updateParamDisplay(widgetId, paramIndex, param, data) {
@@ -161,7 +68,7 @@ export const numericWidget = {
 
         if (valueElement) {
             valueElement.textContent = data.formattedValue;
-            valueElement.style.color = param.color || '#000000'; // Чёрный по умолчанию для numeric
+            valueElement.style.color = param.color || '#000000';
         }
 
         if (timestampElement) {
@@ -255,13 +162,5 @@ export const numericWidget = {
 
     destroy(widgetId) {
         console.log(`Destroying numeric widget: ${widgetId}`);
-    },
-
-    hexToBytes(hex) {
-        const bytes = [];
-        for (let i = 0; i < hex.length; i += 2) {
-            bytes.push(parseInt(hex.substr(i, 2), 16));
-        }
-        return bytes;
     }
 };
